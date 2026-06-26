@@ -6,6 +6,7 @@
 import { ITimeout, SequenceDiff } from './algorithms/diffAlgorithm.js';
 import { DetailedLineRangeMapping, LineRangeMapping } from '../rangeMapping.js';
 import { pushMany, compareBy, numberComparator, reverseOrder } from '../../../../base/common/arrays.js';
+import { nativeLinesSimilarSync } from '../../../../base/common/native/native.js';
 import { MonotonousArray, findLastMonotonous } from '../../../../base/common/arraysFind.js';
 import { SetMap } from '../../../../base/common/map.js';
 import { LineRange, LineRangeSet } from '../../core/ranges/lineRange.js';
@@ -257,6 +258,12 @@ function computeUnchangedMoves(
 function areLinesSimilar(line1: string, line2: string, timeout: ITimeout): boolean {
 	if (line1.trim() === line2.trim()) { return true; }
 	if (line1.length > 300 && line2.length > 300) { return false; }
+
+	// ponytail: try native sync path first
+	const nativeResult = nativeLinesSimilarSync(line1, line2);
+	if (nativeResult !== undefined) {
+		return nativeResult;
+	}
 
 	const myersDiffingAlgorithm = new MyersDiffAlgorithm();
 	const result = myersDiffingAlgorithm.compute(

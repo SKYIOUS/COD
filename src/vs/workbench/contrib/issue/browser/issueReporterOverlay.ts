@@ -751,9 +751,9 @@ export class IssueReporterOverlay {
 
 	private getAllSourceOptions(): { label: string; value: IssueSource }[] {
 		return [
-			{ label: product.nameLong || localize('vscode', "Visual Studio Code"), value: IssueSource.VSCode },
+			{ label: product.nameLong || localize('vscode', "COD"), value: IssueSource.VSCode },
 			{ label: localize('agentsWindow', "Agents Window"), value: IssueSource.AgentsWindow },
-			{ label: localize('extensionSource', "A VS Code extension"), value: IssueSource.Extension },
+			{ label: localize('extensionSource', "A COD extension"), value: IssueSource.Extension },
 			{ label: localize('marketplace', "Extensions Marketplace"), value: IssueSource.Marketplace },
 		];
 	}
@@ -1059,11 +1059,11 @@ export class IssueReporterOverlay {
 	private getIssueSourceLabel(): string {
 		switch (this.selectedIssueSource) {
 			case IssueSource.VSCode:
-				return product.nameLong || localize('vscode', "Visual Studio Code");
+				return product.nameLong || localize('vscode', "COD");
 			case IssueSource.AgentsWindow:
 				return localize('agentsWindow', "Agents Window");
 			case IssueSource.Extension:
-				return this.selectedExtension?.displayName || this.selectedExtension?.name || localize('extensionSource', "A VS Code extension");
+				return this.selectedExtension?.displayName || this.selectedExtension?.name || localize('extensionSource', "A COD extension");
 			case IssueSource.Marketplace:
 				return localize('marketplace', "Extensions Marketplace");
 			case IssueSource.Unknown:
@@ -1563,7 +1563,7 @@ export class IssueReporterOverlay {
 				renderContent: (container) => {
 					const sysTable = append(container, $('table.review-diag-table'));
 					if (modelData.versionInfo) {
-						this.addDiagRow(sysTable, 'VS Code', modelData.versionInfo.vscodeVersion);
+						this.addDiagRow(sysTable, 'COD', modelData.versionInfo.vscodeVersion);
 						this.addDiagRow(sysTable, 'OS', modelData.versionInfo.os);
 					}
 					if (modelData.systemInfo) {

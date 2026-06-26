@@ -5,6 +5,7 @@
 
 import { encodeHex, VSBuffer } from './buffer.js';
 import * as strings from './strings.js';
+import { nativeStringSha1 } from './native/native.js';
 
 type NotSyncHashable = ArrayBufferLike | ArrayBufferView;
 
@@ -321,4 +322,18 @@ export class StringSHA1 {
 		this._h3 = (this._h3 + d) & 0xffffffff;
 		this._h4 = (this._h4 + e) & 0xffffffff;
 	}
+}
+
+export async function nativeStringSHA1(input: string): Promise<string> {
+	try {
+		const result = await nativeStringSha1(input);
+		if (result) {
+			return result;
+		}
+	} catch {
+		// fall through to JS
+	}
+	const sha = new StringSHA1();
+	sha.update(input);
+	return sha.digest();
 }

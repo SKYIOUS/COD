@@ -5,6 +5,7 @@
 
 import { OffsetRange } from '../../../core/ranges/offsetRange.js';
 import { DiffAlgorithmResult, IDiffAlgorithm, ISequence, ITimeout, InfiniteTimeout, SequenceDiff } from './diffAlgorithm.js';
+import { nativeMyersDiff, nativeMyersDiffSync, NativeSequenceDiff } from '../../../../../../vs/base/common/native/native.js';
 
 /**
  * An O(ND) diff algorithm that has a quadratic space worst-case complexity.
@@ -15,6 +16,20 @@ export class MyersDiffAlgorithm implements IDiffAlgorithm {
 		// The early return improves performance dramatically.
 		if (seq1.length === 0 || seq2.length === 0) {
 			return DiffAlgorithmResult.trivial(seq1, seq2);
+		}
+
+		// ponytail: try native sync path if module preloaded
+		const arr1: number[] = [];
+		const arr2: number[] = [];
+		for (let i = 0; i < seq1.length; i++) { arr1.push(seq1.getElement(i)); }
+		for (let i = 0; i < seq2.length; i++) { arr2.push(seq2.getElement(i)); }
+		const nativeResult = nativeMyersDiffSync(arr1, arr2);
+		if (nativeResult) {
+			const diffs = nativeResult.map((d: NativeSequenceDiff) => new SequenceDiff(
+				new OffsetRange(d.seq1Start, d.seq1End),
+				new OffsetRange(d.seq2Start, d.seq2End),
+			));
+			return new DiffAlgorithmResult(diffs, false);
 		}
 
 		const seqX = seq1; // Text on the x axis
@@ -100,6 +115,30 @@ export class MyersDiffAlgorithm implements IDiffAlgorithm {
 
 		result.reverse();
 		return new DiffAlgorithmResult(result, false);
+	}
+
+	async computeNative(seq1: ISequence, seq2: ISequence): Promise<DiffAlgorithmResult> {
+		try {
+			const arr1: number[] = [];
+			const arr2: number[] = [];
+			for (let i = 0; i < seq1.length; i++) {
+				arr1.push(seq1.getElement(i));
+			}
+			for (let i = 0; i < seq2.length; i++) {
+				arr2.push(seq2.getElement(i));
+			}
+			const result = await nativeMyersDiff(arr1, arr2);
+			if (result) {
+				const diffs = result.map((d: NativeSequenceDiff) => new SequenceDiff(
+					new OffsetRange(d.seq1Start, d.seq1End),
+					new OffsetRange(d.seq2Start, d.seq2End),
+				));
+				return new DiffAlgorithmResult(diffs, false);
+			}
+		} catch {
+			// fall through to JS
+		}
+		return this.compute(seq1, seq2);
 	}
 }
 

@@ -330,7 +330,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 	//#endregion
 
 	private getEntryProps(): IStatusbarEntry {
-		let text = '$(copilot)';
+		let text = '$(chat)';
 		let ariaLabel = localize('chatStatusAria', "Copilot status");
 		let kind: StatusbarEntryKind | undefined;
 
@@ -372,7 +372,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 			// Copilot Resumed (limit reset after the user was previously blocked)
 			else if (this.quotaResumeState === 'resumed') {
 				const resumedLabel = localize('chatResumedStatus', "Copilot Resumed");
-				text = `$(copilot) ${resumedLabel}`;
+				text = `$(chat) ${resumedLabel}`;
 				ariaLabel = resumedLabel;
 				kind = 'prominent';
 			}
@@ -409,7 +409,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 		const signInLabel = localize('signIn', "Sign In");
 		return {
 			name: localize('chatStatus', "Copilot Status"),
-			text: showSignInLabel ? `$(copilot) ${signInLabel}` : '$(copilot)',
+			text: showSignInLabel ? `$(chat) ${signInLabel}` : '$(chat)',
 			ariaLabel: showSignInLabel ? signInLabel : localize('chatStatusAria', "Copilot status"),
 			command: CHAT_SETUP_ACTION_ID,
 			showInAllWindows: true,

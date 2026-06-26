@@ -11,7 +11,6 @@ import { IKeybindingService } from '../../../../platform/keybinding/common/keybi
 import { MenuRegistry } from '../../../../platform/actions/common/actions.js';
 import { ChatConfiguration, ChatModeKind, OPEN_AGENTS_WINDOW_COMMAND_ID, OPEN_AGENTS_WINDOW_PRECONDITION, OPEN_WORKSPACE_IN_AGENTS_WINDOW_COMMAND_ID } from '../common/constants.js';
 import { ChatContextKeys } from '../common/actions/chatContextKeys.js';
-import { IsSessionsWindowContext } from '../../../common/contextkeys.js';
 import { localChatSessionType } from '../common/chatSessionsService.js';
 import { ITipExclusionConfig } from './chatTipEligibilityTracker.js';
 import { TipTrackingCommands } from './chatTipStorageKeys.js';
@@ -426,25 +425,7 @@ export const TIP_CATALOG: readonly ITipDefinition[] = [
 			OPEN_WORKSPACE_IN_AGENTS_WINDOW_COMMAND_ID,
 		],
 	},
-	{
-		id: 'tip.copilotCli',
-		tier: ChatTipTier.Qol,
-		buildMessage() {
-			return new MarkdownString(
-				localize(
-					'tip.copilotCli',
-					"Run agents in parallel with [Copilot CLI](command:workbench.action.chat.openNewChatSessionInPlace.copilotcli?%5B%22sidebar%22%5D \"Switch to Copilot CLI\")."
-				)
-			);
-		},
-		when: ContextKeyExpr.and(
-			IsSessionsWindowContext.negate(),
-			ChatContextKeys.chatSessionType.isEqualTo(localChatSessionType),
-			ChatContextKeys.chatModeKind.isEqualTo(ChatModeKind.Agent),
-			ChatContextKeys.hasCanDelegateProviders,
-		),
-		excludeWhenCommandsExecuted: ['workbench.action.chat.openNewChatSessionInPlace.copilotcli'],
-	},
+
 	{
 		id: 'tip.defaultPermissions',
 		tier: ChatTipTier.Qol,

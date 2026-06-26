@@ -94,6 +94,7 @@
     "install-latest-component-explorer": "npm install @vscode/component-explorer@next @vscode/component-explorer-cli@next && cd build/rspack && npm install @vscode/component-explorer-webpack-plugin@next @vscode/component-explorer@next && cd ../vite && npm install @vscode/component-explorer-vite-plugin@next @vscode/component-explorer@next"
   },
   "dependencies": {
+    "cod-native": "file:./native",
     "@anthropic-ai/sdk": "^0.82.0",
     "@github/copilot": "^1.0.64-1",
     "@github/copilot-sdk": "^1.0.3",

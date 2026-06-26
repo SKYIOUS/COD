@@ -36,6 +36,18 @@ dist
 .playwright-cli
 .playwright-mcp
 .claude/
+
+# Rust native crate outputs
+/native/target/
+/native/*.node
+/native/index.js
+
+# Benchmark artifacts
+benchmark-*.cjs
+benchmark-*.mjs
+benchmark-*.ps1
+benchmark-results.json
+
 .agents/agents/*.local.md
 .github/agents/*.local.md
 .agents/agents/*.local.agent.md

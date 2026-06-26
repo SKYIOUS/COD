@@ -10,6 +10,7 @@ import { hash } from './hash.js';
 import { sep } from './path.js';
 import { isLinux, isWindows } from './platform.js';
 import { equalsIgnoreCase } from './strings.js';
+import { nativeScoreFuzzy, nativeScoreFuzzySync } from './native/native.js';
 
 //#region Fuzzy scorer
 
@@ -25,6 +26,12 @@ const NO_SCORE: FuzzyScore = [NO_MATCH, []];
 export function scoreFuzzy(target: string, query: string, queryLower: string, allowNonContiguousMatches: boolean): FuzzyScore {
 	if (!target || !query) {
 		return NO_SCORE; // return early if target or query are undefined
+	}
+
+	// ponytail: try native sync path first
+	const nativeResult = nativeScoreFuzzySync(target, query, queryLower, allowNonContiguousMatches);
+	if (nativeResult) {
+		return nativeResult;
 	}
 
 	const targetLength = target.length;
@@ -281,6 +288,17 @@ function scoreSeparatorAtPos(charCode: number): number {
 
 //#endregion
 
+export async function scoreFuzzyNative(target: string, query: string, queryLower: string, allowNonContiguousMatches: boolean): Promise<FuzzyScore> {
+	try {
+		const result = await nativeScoreFuzzy(target, query, queryLower, allowNonContiguousMatches);
+		if (result) {
+			return result;
+		}
+	} catch {
+		// fall through to JS
+	}
+	return scoreFuzzy(target, query, queryLower, allowNonContiguousMatches);
+}
 
 //#region Alternate fuzzy scorer implementation that is e.g. used for symbols
 

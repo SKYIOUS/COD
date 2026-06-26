@@ -3,14 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../base/browser/dom.js';
-import { BaseActionViewItem, IBaseActionViewItemOptions } from '../../../../../base/browser/ui/actionbar/actionViewItems.js';
-import { IAction, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../../base/common/actions.js';
+import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../../base/common/actions.js';
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { Event } from '../../../../../base/common/event.js';
 import { Lazy } from '../../../../../base/common/lazy.js';
 import { Disposable, DisposableStore, markAsSingleton, MutableDisposable } from '../../../../../base/common/lifecycle.js';
-import Severity from '../../../../../base/common/severity.js';
 import { equalsIgnoreCase } from '../../../../../base/common/strings.js';
 import { ThemeIcon } from '../../../../../base/common/themables.js';
 import { URI } from '../../../../../base/common/uri.js';
@@ -23,49 +20,39 @@ import { Action2, MenuId, MenuRegistry, registerAction2 } from '../../../../../p
 import { CommandsRegistry, ICommandService } from '../../../../../platform/commands/common/commands.js';
 import { ConfigurationTarget, IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { ContextKeyExpr, IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
-import { IsWebContext } from '../../../../../platform/contextkey/common/contextkeys.js';
-import { IDialogService } from '../../../../../platform/dialogs/common/dialogs.js';
 import { IEnvironmentService } from '../../../../../platform/environment/common/environment.js';
 import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../../platform/log/common/log.js';
 import { IMarkerService } from '../../../../../platform/markers/common/markers.js';
-import { IOpenerService } from '../../../../../platform/opener/common/opener.js';
 import product from '../../../../../platform/product/common/product.js';
-import { GitHubPaths, IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
 import { IProductService } from '../../../../../platform/product/common/productService.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { ToggleTitleBarConfigAction } from '../../../../browser/parts/titlebar/titlebarActions.js';
+
 import { IWorkbenchContribution } from '../../../../common/contributions.js';
 import { IViewDescriptorService, ViewContainerLocation } from '../../../../common/views.js';
-import { ChatEntitlement, ChatEntitlementContext, ChatEntitlementContextKeys, ChatEntitlementRequests, ChatEntitlementService, IChatEntitlementService, isProUser } from '../../../../services/chat/common/chatEntitlementService.js';
+import { ChatEntitlement, ChatEntitlementContext, ChatEntitlementRequests, ChatEntitlementService, IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
 import { EnablementState, IWorkbenchExtensionEnablementService } from '../../../../services/extensionManagement/common/extensionManagement.js';
 import { ExtensionUrlHandlerOverrideRegistry, IExtensionUrlHandlerOverride } from '../../../../services/extensions/browser/extensionUrlHandler.js';
 import { IExtensionService } from '../../../../services/extensions/common/extensions.js';
-import { IHostService } from '../../../../services/host/browser/host.js';
 import { IWorkbenchLayoutService, Parts } from '../../../../services/layout/browser/layoutService.js';
-import { InEditorZenModeContext } from '../../../../common/contextkeys.js';
-import { ILifecycleService } from '../../../../services/lifecycle/common/lifecycle.js';
 import { IPreferencesService } from '../../../../services/preferences/common/preferences.js';
 import { IExtension, IExtensionsWorkbenchService } from '../../../extensions/common/extensions.js';
 import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
 import { IChatSessionsService } from '../../common/chatSessionsService.js';
 import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from '../../common/constants.js';
 import { CHAT_CATEGORY, CHAT_SETUP_ACTION_ID, CHAT_SETUP_SUPPORT_ANONYMOUS_ACTION_ID } from '../actions/chatActions.js';
-import { ChatViewContainerId, IChatWidget, IChatWidgetService } from '../chat.js';
+import { ChatViewContainerId } from '../chat.js';
 import { ChatInputNotificationSeverity, IChatInputNotificationService } from '../widget/input/chatInputNotificationService.js';
 import { chatViewsWelcomeRegistry } from '../viewsWelcome/chatViewsWelcome.js';
-import { buildUpgradeUrlWithRedirect, ChatSetupAnonymous, ChatSetupStrategy, refreshTokens } from './chatSetup.js';
+import { ChatSetupAnonymous, ChatSetupStrategy, refreshTokens } from './chatSetup.js';
 import { ChatSetupController } from './chatSetupController.js';
 import { GrowthSessionController, registerGrowthSession } from './chatSetupGrowthSession.js';
 import { AICodeActionsHelper, AINewSymbolNamesProvider, ChatCodeActionsProvider, SetupAgent } from './chatSetupProviders.js';
-import { ChatSetup } from './chatSetupRunner.js';
 
 const defaultChat = {
 	chatExtensionId: product.defaultChatAgent?.chatExtensionId ?? '',
 };
-
-const SIGN_IN_TITLE_BAR_ACTION_ID = 'workbench.action.chat.signInIndicator';
 
 export class ChatSetupContribution extends Disposable implements IWorkbenchContribution {
 
@@ -97,7 +84,6 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 		this.registerSetupAgents(context, controller);
 		this.registerGrowthSession(chatEntitlementService);
 		this.registerActions(context, requests, controller);
-		this.registerSignInTitleBarEntry(actionViewItemService);
 		this.registerUrlLinkHandler();
 		this.checkExtensionInstallation(context);
 	}
@@ -220,89 +206,14 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 
 		//#region Global Chat Setup Actions
 
-		class ChatSetupTriggerAction extends Action2 {
-
-			static CHAT_SETUP_ACTION_LABEL = localize2('triggerChatSetup', "Use AI Features with Copilot for free...");
-
-			constructor() {
-				super({
-					id: CHAT_SETUP_ACTION_ID,
-					title: ChatSetupTriggerAction.CHAT_SETUP_ACTION_LABEL,
-					category: CHAT_CATEGORY,
-					f1: true,
-					precondition: ContextKeyExpr.or(
-						ChatContextKeys.Setup.hidden,
-						ChatContextKeys.Setup.disabledInWorkspace,
-						ChatContextKeys.Setup.untrusted,
-						ChatContextKeys.Setup.completed.negate(),
-						ChatContextKeys.Entitlement.canSignUp
-					)
-				});
-			}
-
-			override async run(accessor: ServicesAccessor, mode?: ChatModeKind | string, options?: { forceSignInDialog?: boolean; additionalScopes?: readonly string[]; forceAnonymous?: ChatSetupAnonymous; inputValue?: string; dialogIcon?: ThemeIcon; dialogTitle?: string; setupStrategy?: ChatSetupStrategy; disableCloseButton?: boolean; onSignInStarted?: () => void }): Promise<boolean> {
-				const widgetService = accessor.get(IChatWidgetService);
-				const instantiationService = accessor.get(IInstantiationService);
-				const dialogService = accessor.get(IDialogService);
-				const commandService = accessor.get(ICommandService);
-				const lifecycleService = accessor.get(ILifecycleService);
-				const configurationService = accessor.get(IConfigurationService);
-
-				await context.update({ hidden: false });
-				configurationService.updateValue(ChatConfiguration.AIDisabled, false);
-
-				if (mode) {
-					const chatWidget = await widgetService.revealWidget();
-					if (chatWidget) {
-						const resolvedMode = this.resolveAgentId(mode, chatWidget);
-						if (resolvedMode) {
-							chatWidget.input.setChatMode(resolvedMode);
-						}
-					}
-				}
-
-				if (options?.inputValue) {
-					const chatWidget = await widgetService.revealWidget();
-					chatWidget?.input.showScrollbarUntilAccept();
-					chatWidget?.setInput(options.inputValue);
-				}
-
-				const setup = ChatSetup.getInstance(instantiationService, context, controller);
-				const { success } = await setup.run(options);
-				if (success === false && !lifecycleService.willShutdown) {
-					const { confirmed } = await dialogService.confirm({
-						type: Severity.Error,
-						message: localize('setupErrorDialog', "Chat setup failed. Would you like to try again?"),
-						primaryButton: localize('retry', "Retry"),
-					});
-
-					if (confirmed) {
-						return Boolean(await commandService.executeCommand(CHAT_SETUP_ACTION_ID, mode, options));
-					}
-				}
-
-				return Boolean(success);
-			}
-
-			private resolveAgentId(agentParam: string, chatWidget: IChatWidget): string | undefined {
-				const modes = chatWidget.input.currentChatModesObs.get();
-				const foundAgent = modes.findModeById(agentParam);
-				if (foundAgent) {
-					return foundAgent.id;
-				}
-				const allAgents = [...modes.builtin, ...modes.custom];
-				const nameLower = agentParam.toLowerCase();
-				const agentByName = allAgents.find(agent => agent.name.get().toLowerCase() === nameLower);
-				return agentByName?.id;
-			}
-		}
+		const CHAT_SETUP_ACTION_LABEL = localize2('triggerChatSetup', "Use AI Features for free...");
 
 		class ChatSetupTriggerSupportAnonymousAction extends Action2 {
 
 			constructor() {
 				super({
 					id: CHAT_SETUP_SUPPORT_ANONYMOUS_ACTION_ID,
-					title: ChatSetupTriggerAction.CHAT_SETUP_ACTION_LABEL
+					title: CHAT_SETUP_ACTION_LABEL
 				});
 			}
 
@@ -320,31 +231,12 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 			}
 		}
 
-		class ChatSetupTriggerForceSignInDialogAction extends Action2 {
-
-			constructor() {
-				super({
-					id: 'workbench.action.chat.triggerSetupForceSignIn',
-					title: localize2('forceSignIn', "Sign in to use GitHub Copilot")
-				});
-			}
-
-			override async run(accessor: ServicesAccessor): Promise<unknown> {
-				const commandService = accessor.get(ICommandService);
-				const telemetryService = accessor.get(ITelemetryService);
-
-				telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: CHAT_SETUP_ACTION_ID, from: 'api' });
-
-				return commandService.executeCommand(CHAT_SETUP_ACTION_ID, undefined, { forceSignInDialog: true });
-			}
-		}
-
 		class ChatSetupTriggerAnonymousWithoutDialogAction extends Action2 {
 
 			constructor() {
 				super({
 					id: 'workbench.action.chat.triggerSetupAnonymousWithoutDialog',
-					title: ChatSetupTriggerAction.CHAT_SETUP_ACTION_LABEL
+					title: CHAT_SETUP_ACTION_LABEL
 				});
 			}
 
@@ -358,209 +250,8 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 			}
 		}
 
-		class ChatSetupFromAccountsAction extends Action2 {
-
-			constructor() {
-				super({
-					id: 'workbench.action.chat.triggerSetupFromAccounts',
-					title: localize2('triggerChatSetupFromAccounts', "Sign in to use GitHub Copilot..."),
-					menu: {
-						id: MenuId.AccountsContext,
-						group: '2_copilot',
-						when: ContextKeyExpr.and(
-							ChatContextKeys.Setup.hidden.negate(),
-							ChatContextKeys.Setup.disabledInWorkspace.negate(),
-							ChatContextKeys.Setup.completed.negate(),
-							ChatContextKeys.Entitlement.signedOut
-						)
-					}
-				});
-			}
-
-			override async run(accessor: ServicesAccessor): Promise<void> {
-				const commandService = accessor.get(ICommandService);
-				const telemetryService = accessor.get(ITelemetryService);
-
-				telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: CHAT_SETUP_ACTION_ID, from: 'accounts' });
-
-				return commandService.executeCommand(CHAT_SETUP_ACTION_ID);
-			}
-		}
-
-		class ChatSetupSignInTitleBarAction extends Action2 {
-
-			static readonly ID = SIGN_IN_TITLE_BAR_ACTION_ID;
-
-			constructor() {
-				super({
-					id: ChatSetupSignInTitleBarAction.ID,
-					title: localize('signInIndicatorTitleBarAction', 'Sign In'),
-					f1: false,
-					menu: [{
-						id: MenuId.TitleBarAdjacentCenter,
-						order: 0, // same position as the update button
-						when: ContextKeyExpr.and(
-							IsWebContext.negate(),
-							ChatContextKeys.Entitlement.signedOut,
-							ChatEntitlementContextKeys.hasByokModels.negate(),
-							ChatContextKeys.Setup.hidden.negate(),
-							ChatContextKeys.Setup.disabledInWorkspace.negate(),
-							ContextKeyExpr.equals(`config.${ChatConfiguration.TitleBarSignInEnabled}`, true),
-							ContextKeyExpr.has('updateTitleBar').negate(),
-							InEditorZenModeContext.negate(),
-						),
-					}]
-				});
-			}
-
-			override async run(accessor: ServicesAccessor): Promise<void> {
-				const commandService = accessor.get(ICommandService);
-				const telemetryService = accessor.get(ITelemetryService);
-
-				telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: CHAT_SETUP_ACTION_ID, from: 'titlebar' });
-
-				return commandService.executeCommand(CHAT_SETUP_ACTION_ID);
-			}
-		}
-
-		class ToggleSignInTitleBarAction extends ToggleTitleBarConfigAction {
-			constructor() {
-				super(
-					ChatConfiguration.TitleBarSignInEnabled,
-					localize('toggle.chatSignIn', 'Copilot Sign In'),
-					localize('toggle.chatSignInDescription', "Toggle visibility of the Copilot Sign In button in title bar"),
-					3,
-					ContextKeyExpr.and(
-						IsWebContext.negate(),
-						ChatContextKeys.Entitlement.signedOut,
-						ChatContextKeys.Setup.hidden.negate(),
-						ChatContextKeys.Setup.disabledInWorkspace.negate(),
-					)
-				);
-			}
-		}
-
-		const windowFocusListener = this._register(new MutableDisposable());
-		class UpgradePlanAction extends Action2 {
-			constructor() {
-				super({
-					id: 'workbench.action.chat.upgradePlan',
-					title: localize2('managePlan', "Upgrade to GitHub Copilot Pro"),
-					category: localize2('chat.category', 'Chat'),
-					f1: true,
-					precondition: ContextKeyExpr.and(
-						ChatContextKeys.Setup.hidden.negate(),
-						ChatContextKeys.Setup.disabledInWorkspace.negate(),
-						ContextKeyExpr.or(
-							ChatContextKeys.Entitlement.canSignUp,
-							ChatContextKeys.Entitlement.planFree
-						)
-					),
-					menu: {
-						id: MenuId.ChatTitleBarMenu,
-						group: 'a_first',
-						order: 1,
-						when: ContextKeyExpr.and(
-							ChatContextKeys.Entitlement.planFree,
-							ContextKeyExpr.or(
-								ChatContextKeys.chatQuotaExceeded,
-								ChatContextKeys.completionsQuotaExceeded
-							)
-						)
-					}
-				});
-			}
-
-			override async run(accessor: ServicesAccessor): Promise<void> {
-				const openerService = accessor.get(IOpenerService);
-				const hostService = accessor.get(IHostService);
-				const commandService = accessor.get(ICommandService);
-				const telemetryService = accessor.get(ITelemetryService);
-				const defaultAccountService = accessor.get(IDefaultAccountService);
-				const productService = accessor.get(IProductService);
-
-				telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: 'workbench.action.chat.upgradePlan', from: 'command' });
-
-				const baseUrl = defaultAccountService.resolveGitHubUrl(GitHubPaths.copilotUpgrade);
-				const upgradeUrl = buildUpgradeUrlWithRedirect(baseUrl, productService.urlProtocol, productService.quality);
-				openerService.open(upgradeUrl);
-
-				const entitlement = context.state.entitlement;
-				if (!isProUser(entitlement)) {
-					// If the user is not yet Pro, we listen to window focus to refresh the token
-					// when the user has come back to the window assuming the user signed up.
-					// This serves as a fallback when the redirect does not fire.
-					windowFocusListener.value = hostService.onDidChangeFocus(focus => this.onWindowFocus(focus, commandService));
-				}
-			}
-
-			private async onWindowFocus(focus: boolean, commandService: ICommandService): Promise<void> {
-				if (focus) {
-					windowFocusListener.clear();
-
-					const entitlements = await requests.forceResolveEntitlement();
-					if (entitlements?.entitlement && isProUser(entitlements?.entitlement)) {
-						refreshTokens(commandService);
-					}
-				}
-			}
-		}
-
-		class ManageAdditionalSpendAction extends Action2 {
-			constructor() {
-				super({
-					id: 'workbench.action.chat.manageAdditionalSpend',
-					title: localize2('manageAdditionalSpend', "Manage GitHub Copilot Budget"),
-					category: localize2('chat.category', 'Chat'),
-					f1: true,
-					precondition: ContextKeyExpr.and(
-						ChatContextKeys.Setup.hidden.negate(),
-						ChatContextKeys.Setup.disabledInWorkspace.negate(),
-						ContextKeyExpr.or(
-							ChatContextKeys.Entitlement.planPro,
-							ChatContextKeys.Entitlement.planProPlus,
-							ChatContextKeys.Entitlement.planMax,
-							ChatContextKeys.Entitlement.planEdu,
-						)
-					),
-					menu: {
-						id: MenuId.ChatTitleBarMenu,
-						group: 'a_first',
-						order: 1,
-						when: ContextKeyExpr.and(
-							ContextKeyExpr.or(
-								ChatContextKeys.Entitlement.planPro,
-								ChatContextKeys.Entitlement.planProPlus,
-								ChatContextKeys.Entitlement.planMax,
-								ChatContextKeys.Entitlement.planEdu,
-							),
-							ContextKeyExpr.or(
-								ChatContextKeys.chatQuotaExceeded,
-								ChatContextKeys.completionsQuotaExceeded
-							)
-						)
-					}
-				});
-			}
-
-			override async run(accessor: ServicesAccessor): Promise<void> {
-				const openerService = accessor.get(IOpenerService);
-				const telemetryService = accessor.get(ITelemetryService);
-				const defaultAccountService = accessor.get(IDefaultAccountService);
-				telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: 'workbench.action.chat.manageAdditionalSpend', from: 'command' });
-				openerService.open(URI.parse(defaultAccountService.resolveGitHubUrl(GitHubPaths.billingBudgets)));
-			}
-		}
-
-		registerAction2(ChatSetupTriggerAction);
-		registerAction2(ChatSetupTriggerForceSignInDialogAction);
-		registerAction2(ChatSetupFromAccountsAction);
-		registerAction2(ChatSetupSignInTitleBarAction);
-		registerAction2(ToggleSignInTitleBarAction);
 		registerAction2(ChatSetupTriggerAnonymousWithoutDialogAction);
 		registerAction2(ChatSetupTriggerSupportAnonymousAction);
-		registerAction2(UpgradePlanAction);
-		registerAction2(ManageAdditionalSpendAction);
 
 		//#endregion
 
@@ -646,14 +337,6 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 			when: internalGenerateCodeContext
 		});
 
-	}
-
-	private registerSignInTitleBarEntry(actionViewItemService: IActionViewItemService): void {
-		this._register(actionViewItemService.register(
-			MenuId.TitleBarAdjacentCenter,
-			SIGN_IN_TITLE_BAR_ACTION_ID,
-			(action, options) => new SignInTitleBarEntry(action, options)
-		));
 	}
 
 	private registerUrlLinkHandler(): void {
@@ -896,44 +579,4 @@ export class ChatTeardownContribution extends Disposable implements IWorkbenchCo
 
 //#endregion
 
-/**
- * Custom action view item that renders a "Sign In" button
- * in the title bar with prominent button styling.
- */
-class SignInTitleBarEntry extends BaseActionViewItem {
 
-	private label: HTMLElement | undefined;
-
-	constructor(
-		action: IAction,
-		options: IBaseActionViewItemOptions,
-	) {
-		super(undefined, action, options);
-	}
-
-	public override render(container: HTMLElement) {
-		super.render(container);
-
-		container.setAttribute('role', 'button');
-		container.setAttribute('aria-label', this.action.label);
-
-		const content = dom.append(container, dom.$('.update-indicator.prominent'));
-		this.label = dom.append(content, dom.$('.indicator-label'));
-		this.label.textContent = this.action.label;
-	}
-
-	protected override updateLabel(): void {
-		if (this.label) {
-			this.label.textContent = this.action.label;
-		}
-		if (this.element) {
-			this.element.setAttribute('aria-label', this.action.label);
-		}
-	}
-
-	protected override updateEnabled(): void {
-		if (this.element) {
-			this.element.classList.toggle('disabled', !this.action.enabled);
-		}
-	}
-}

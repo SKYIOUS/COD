@@ -8,6 +8,7 @@ import { LRUCache } from './map.js';
 import { getKoreanAltChars } from './naturalLanguage/korean.js';
 import { tryNormalizeToBase } from './normalization.js';
 import * as strings from './strings.js';
+import { nativeFuzzyScore } from './native/native.js';
 
 export interface IFilter {
 	// Returns null if word doesn't match.
@@ -915,6 +916,17 @@ function _doScore(
 
 //#endregion
 
+export async function fuzzyScoreNative(pattern: string, patternLow: string, patternStart: number, word: string, wordLow: string, wordStart: number, options?: FuzzyScoreOptions): Promise<FuzzyScore | undefined> {
+	try {
+		const result = await nativeFuzzyScore(pattern, word);
+		if (result) {
+			return [result.score, wordStart, ...result.matches.slice(1)];
+		}
+	} catch {
+		// fall through to JS
+	}
+	return fuzzyScore(pattern, patternLow, patternStart, word, wordLow, wordStart, options);
+}
 
 //#region --- graceful ---
 

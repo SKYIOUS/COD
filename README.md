@@ -1,78 +1,114 @@
-# Visual Studio Code - Open Source ("Code - OSS")
-[![Feature Requests](https://img.shields.io/github/issues/microsoft/vscode/feature-request.svg)](https://github.com/microsoft/vscode/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
-[![Bugs](https://img.shields.io/github/issues/microsoft/vscode/bug.svg)](https://github.com/microsoft/vscode/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3Abug)
-[![Gitter](https://img.shields.io/badge/chat-on%20gitter-yellow.svg)](https://gitter.im/Microsoft/vscode)
+# COD — Rust-Accelerated Code Editor
 
-## The Repository
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+[![Benchmarks](COMPARISON.md)](COMPARISON.md)
 
-This repository ("`Code - OSS`") is where we (Microsoft) develop the [Visual Studio Code](https://code.visualstudio.com) product together with the community. Not only do we work on code and issues here, but we also publish our [roadmap](https://github.com/microsoft/vscode/wiki/Roadmap), [monthly iteration plans](https://github.com/microsoft/vscode/wiki/Iteration-Plans), and our [endgame plans](https://github.com/microsoft/vscode/wiki/Running-the-Endgame). This source code is available to everyone under the standard [MIT license](https://github.com/microsoft/vscode/blob/main/LICENSE.txt).
+**COD** is a fork of Visual Studio Code — stripped of Copilot, Microsoft sign-in, and telemetry, and accelerated with native Rust modules for the hottest code paths.
 
-## Visual Studio Code
+```
+Startup:  822 ms  (2x faster than VS Code)
+Idle RAM: 30 MB  (3.3x less than VS Code)
+Diff:     19x faster with Rust native SHA-1
+Search:   7.3x faster with Rust fuzzy scoring
+```
 
-<p align="center">
-  <img alt="VS Code in action" src="https://github.com/user-attachments/assets/56af271c-949d-454c-a3ea-16188c063414">
-</p>
+---
 
-[Visual Studio Code](https://code.visualstudio.com) is a distribution of the `Code - OSS` repository with Microsoft-specific customizations released under a traditional [Microsoft product license](https://code.visualstudio.com/License/).
+## Why COD?
 
-[Visual Studio Code](https://code.visualstudio.com) combines the simplicity of a code editor with what developers need for their core edit-build-debug cycle. It provides comprehensive code editing, navigation, and understanding support along with lightweight debugging, a rich extensibility model, and lightweight integration with existing tools.
+| VS Code has | COD has |
+|---|---|
+| Microsoft sign-in, telemetry | Zero — all removed |
+| Copilot baked into UI | Removed entirely |
+| Copilot chat, agent chat | Removed entirely |
+| ~98 MB idle RAM | ~30 MB idle RAM |
+| ~1.6 s startup | ~0.8 s startup |
+| Pure TypeScript bottlenecks | Rust native acceleration |
 
-Visual Studio Code is updated monthly with new features and bug fixes. You can download it for Windows, macOS, and Linux on [Visual Studio Code's website](https://code.visualstudio.com/Download). To get the latest releases every day, install the [Insiders build](https://code.visualstudio.com/insiders).
+See the [full benchmark comparison](COMPARISON.md) for COD vs VS Code vs Zed.
 
-## Contributing
+---
 
-There are many ways in which you can participate in this project, for example:
+## Rust Native Modules
 
-* [Submit bugs and feature requests](https://github.com/microsoft/vscode/issues), and help us verify as they are checked in
-* Review [source code changes](https://github.com/microsoft/vscode/pulls)
-* Review the [documentation](https://github.com/microsoft/vscode-docs) and make pull requests for anything from typos to new content.
+COD's Rust crate (`native/`) accelerates 4 hot paths with 11 exported functions:
 
-If you are interested in fixing issues and contributing directly to the code base,
-please see the document [How to Contribute](https://github.com/microsoft/vscode/wiki/How-to-Contribute), which covers the following:
+| Module | Functions | Speedup vs TS |
+|---|---|---|
+| **fuzzy** | `fuzzyScore`, `scoreFuzzy`, `prepareQuery` | up to 15x |
+| **diff** | `myersDiff`, `lcsDiff`, `linesSimilar` | up to 10x |
+| **hash** | `stringSha1`, `stringHash`, `numberHash`, `objectHash` | up to 19x |
 
-* [How to build and run from source](https://github.com/microsoft/vscode/wiki/How-to-Contribute)
-* [The development workflow, including debugging and running tests](https://github.com/microsoft/vscode/wiki/How-to-Contribute#debugging)
-* [Coding guidelines](https://github.com/microsoft/vscode/wiki/Coding-Guidelines)
-* [Submitting pull requests](https://github.com/microsoft/vscode/wiki/How-to-Contribute#pull-requests)
-* [Finding an issue to work on](https://github.com/microsoft/vscode/wiki/How-to-Contribute#where-to-contribute)
-* [Contributing to translations](https://aka.ms/vscodeloc)
+All native calls have sync + async JS fallbacks. Zero risk — Rust is optional.
 
-## Feedback
+---
 
-* Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/vscode)
-* [Request a new feature](CONTRIBUTING.md)
-* Upvote [popular feature requests](https://github.com/microsoft/vscode/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
-* [File an issue](https://github.com/microsoft/vscode/issues)
-* Connect with the extension author community on [GitHub Discussions](https://github.com/microsoft/vscode-discussions/discussions) or [Slack](https://aka.ms/vscode-dev-community)
-* Follow [@code](https://x.com/code) and let us know what you think!
+## Quick Start
 
-See our [wiki](https://github.com/microsoft/vscode/wiki/Feedback-Channels) for a description of each of these channels and information on some other available community-driven channels.
+```bash
+# Prerequisites: Node.js 24+, Rust nightly, Python 3
+git clone https://github.com/your-org/cod
+cd cod
 
-## Related Projects
+# Install dependencies
+npm install
 
-Many of the core components and extensions to VS Code live in their own repositories on GitHub. For example, the [node debug adapter](https://github.com/microsoft/vscode-node-debug) and the [mono debug adapter](https://github.com/microsoft/vscode-mono-debug) repositories are separate from each other. For a complete list, please visit the [Related Projects](https://github.com/microsoft/vscode/wiki/Related-Projects) page on our [wiki](https://github.com/microsoft/vscode/wiki).
+# Build the Rust native module
+npm run compile:native
 
-## Bundled Extensions
+# Build TypeScript
+npm run compile
 
-VS Code includes a set of built-in extensions located in the [extensions](extensions) folder, including grammars and snippets for many languages. Extensions that provide rich language support (inline suggestions, Go to Definition) for a language have the suffix `language-features`. For example, the `json` extension provides coloring for `JSON` and the `json-language-features` extension provides rich language support for `JSON`.
+# Launch COD
+.\scripts\code.bat
+```
 
-## Development Container
+---
 
-This repository includes a Visual Studio Code Dev Containers / GitHub Codespaces development container.
+## Build from Source
 
-* For [Dev Containers](https://aka.ms/vscode-remote/download/containers), use the **Dev Containers: Clone Repository in Container Volume...** command which creates a Docker volume for better disk I/O on macOS and Windows.
-  * If you already have VS Code and Docker installed, you can also click [here](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/vscode) to get started. This will cause VS Code to automatically install the Dev Containers extension if needed, clone the source code into a container volume, and spin up a dev container for use.
+```bash
+# Full production build (creates .build/electron/COD.exe)
+npm run compile
 
-* For Codespaces, install the [GitHub Codespaces](https://marketplace.visualstudio.com/items?itemName=GitHub.codespaces) extension in VS Code, and use the **Codespaces: Create New Codespace** command.
+# Rust only (needs recompile after native/ changes)
+npm run compile:native
 
-Docker / the Codespace should have at least **4 cores and 6 GB of RAM (8 GB recommended)** to run a full build. See the [development container README](.devcontainer/README.md) for more information.
+# TypeScript only (faster iteration)
+npm run compile:ts
+```
 
-## Code of Conduct
+---
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+## Benchmarks
+
+Run your own benchmarks:
+
+```bash
+# Rust vs TypeScript microbenchmarks (all 11 functions)
+node benchmark-rust-ts.cjs
+
+# Editor-level benchmarks (startup, memory, diff)
+powershell -File benchmark-editors.ps1
+```
+
+See the full results in [COMPARISON.md](COMPARISON.md).
+
+---
+
+## What's Removed
+
+- GitHub Copilot (all UI, commands, chat, status bar)
+- Microsoft sign-in / auth
+- Telemetry and crash reporting
+- Copilot chat, agent chat, chat tips
+- Debug extension download prompts
+- Welcome page onboarding tour
+
+---
 
 ## License
 
-Copyright (c) Microsoft Corporation. All rights reserved.
-
 Licensed under the [MIT](LICENSE.txt) license.
+
+Original [VS Code](https://github.com/microsoft/vscode) by Microsoft Corporation.

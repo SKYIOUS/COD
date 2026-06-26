@@ -410,7 +410,13 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 				'resources/win32/code_70x70.png',
 				'resources/win32/code_150x150.png'
 			], { base: '.' }));
-		} else if (platform === 'linux') {
+
+		// Include COD native module
+		const nativeNode = globCallback.sync('native/*.node');
+		if (nativeNode.length > 0) {
+			all = es.merge(all, gulp.src('native/*.node', { base: '.' }));
+		}
+	} else if (platform === 'linux') {
 			const policyDest = gulp.src('.build/policies/linux/**', { base: '.build/policies/linux' })
 				.pipe(rename(f => f.dirname = `policies/${f.dirname}`));
 			all = es.merge(all, gulp.src('resources/linux/code.png', { base: '.' }), policyDest);
@@ -697,6 +703,24 @@ BUILD_TARGETS.forEach(buildTarget => {
 		task.task(task.define('vscode-min', task.series(vscodeMin)));
 	}
 });
+
+export function compileNativeTask() {
+	return async () => {
+		console.log('Compiling COD native module (Rust)...');
+		await promisify(cp.exec)('cargo build --release', { cwd: path.join(__dirname, '..', '..', 'native'), maxBuffer: 1024 * 1024 });
+		const nativeDir = path.join(__dirname, '..', '..', 'native');
+		const targetDir = path.join(nativeDir, 'target', 'release');
+		const files = fs.readdirSync(targetDir).filter(f => f.endsWith('.dll') || f.endsWith('.so') || f.endsWith('.dylib') || f.endsWith('.node'));
+		for (const f of files) {
+			const baseName = path.basename(f, path.extname(f)).replace('cod_native', 'cod-native');
+			const destName = baseName + '.node';
+			fs.copyFileSync(path.join(targetDir, f), path.join(nativeDir, destName));
+			console.log(`  Copied ${f} -> ${destName}`);
+		}
+	};
+}
+
+task.task(task.define('compile-native', compileNativeTask()));
 
 // #region nls
 
