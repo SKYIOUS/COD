@@ -28,16 +28,16 @@ interface VinylFileWithLines extends VinylFile {
 }
 
 /**
- * Checks that engines.vscode in extensions/copilot/package.json matches ^{version} from the root package.json.
+ * Checks that engines.vscode in extensions/ollama/package.json matches ^{version} from the root package.json.
  * Returns an error message if mismatched, or undefined if OK.
  */
-export function checkCopilotEnginesVersion(repoRoot: string): string | undefined {
+export function checkOllamaEnginesVersion(repoRoot: string): string | undefined {
 	const rootPkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-	const copilotPkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'extensions/copilot/package.json'), 'utf8'));
+	const ollamaPkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'extensions/ollama/package.json'), 'utf8'));
 	const expected = `^${rootPkg.version}`;
-	const actual = copilotPkg?.engines?.vscode;
+	const actual = ollamaPkg?.engines?.vscode;
 	if (actual !== expected) {
-		return `engines.vscode in 'extensions/copilot/package.json' must be "${expected}" (the version from the root package.json), but found "${actual ?? '<missing>'}"`;
+		return `engines.vscode in 'extensions/ollama/package.json' must be "${expected}" (the version from the root package.json), but found "${actual ?? '<missing>'}"`;
 	}
 	return undefined;
 }
@@ -338,11 +338,11 @@ if (import.meta.main) {
 				const some = out.split(/\r?\n/).filter((l) => !!l);
 
 				if (some.length > 0) {
-					// Check copilot engines.vscode version if relevant files are staged
-					if (some.some(f => f === 'package.json' || f.startsWith('extensions/copilot/'))) {
-						const copilotError = checkCopilotEnginesVersion(process.cwd());
-						if (copilotError) {
-							console.error(copilotError);
+					// Check ollama engines.vscode version if relevant files are staged
+					if (some.some(f => f === 'package.json' || f.startsWith('extensions/ollama/'))) {
+						const ollamaError = checkOllamaEnginesVersion(process.cwd());
+						if (ollamaError) {
+							console.error(ollamaError);
 							process.exit(1);
 						}
 					}

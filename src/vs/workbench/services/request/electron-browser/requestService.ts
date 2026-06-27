@@ -32,6 +32,9 @@ export class NativeRequestService extends AbstractRequestService implements IReq
 	}
 
 	async request(options: IRequestOptions, token: CancellationToken): Promise<IRequestContext> {
+		if (this.configurationService.getValue<boolean>('workbench.privateMode')) {
+			throw new Error('Network requests are blocked while private mode is enabled');
+		}
 		if (!options.proxyAuthorization) {
 			options.proxyAuthorization = this.configurationService.inspect<string>('http.proxyAuthorization').userLocalValue;
 		}

@@ -17,6 +17,17 @@ interface CodNativeModule {
 	objectHash(obj: unknown, depth?: number): number;
 	myersDiff(a: number[], b: number[]): NativeSequenceDiff[];
 	linesSimilar(line1: string, line2: string): boolean;
+	nativeEncodeHex(input: Uint8Array): string;
+	nativeDecodeHex(hex: string): Uint8Array;
+	nativeEncodeBase64(input: Uint8Array, padded?: boolean, urlSafe?: boolean): string;
+	nativeDecodeBase64(input: string): Uint8Array;
+	parseJsonc(content: string): JsoncParseResult;
+}
+
+export interface JsoncParseResult {
+	ok: boolean;
+	value: string | undefined;
+	error: string | undefined;
 }
 
 let nativeModule: CodNativeModule | null | undefined = undefined;
@@ -121,6 +132,59 @@ export async function nativeStringHash(s: string): Promise<number | undefined> {
 	const mod = await getNative();
 	if (mod) {
 		return mod.stringHash(s);
+	}
+	return undefined;
+}
+
+export function nativeEncodeHexSync(input: Uint8Array): string | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.nativeEncodeHex(input);
+	}
+	return undefined;
+}
+
+export function nativeDecodeHexSync(hex: string): Uint8Array | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.nativeDecodeHex(hex);
+	}
+	return undefined;
+}
+
+export function nativeEncodeBase64Sync(input: Uint8Array, padded?: boolean, urlSafe?: boolean): string | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.nativeEncodeBase64(input, padded, urlSafe);
+	}
+	return undefined;
+}
+
+export function nativeParseJsoncSync<T>(content: string): { ok: true; value: T } | { ok: false; error: string } | undefined {
+	if (nativeModuleSync) {
+		const result = nativeModuleSync.parseJsonc(content);
+		if (result.ok && result.value) {
+			return { ok: true, value: JSON.parse(result.value) as T };
+		} else if (!result.ok && result.error) {
+			return { ok: false, error: result.error };
+		}
+	}
+	return undefined;
+}
+
+export async function nativeParseJsonc<T>(content: string): Promise<{ ok: true; value: T } | { ok: false; error: string } | undefined> {
+	const mod = await getNative();
+	if (mod) {
+		const result = await mod.parseJsonc(content);
+		if (result.ok && result.value) {
+			return { ok: true, value: JSON.parse(result.value) as T };
+		} else if (!result.ok && result.error) {
+			return { ok: false, error: result.error };
+		}
+	}
+	return undefined;
+}
+
+export function nativeDecodeBase64Sync(input: string): Uint8Array | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.nativeDecodeBase64(input);
 	}
 	return undefined;
 }

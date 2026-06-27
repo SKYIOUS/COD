@@ -204,6 +204,9 @@ import './contrib/policyExport/electron-browser/policyExport.contribution.js';
 // Keybindings Export
 import './contrib/keybindingsExport/electron-browser/keybindingsExport.contribution.js';
 
+// Privacy
+import './contrib/privacy/browser/privacy.contribution.js';
+
 //#endregion
 
 

@@ -4,10 +4,14 @@ extern crate napi_derive;
 pub mod fuzzy;
 pub mod diff;
 pub mod hash;
+pub mod encoding;
+pub mod jsonc;
 
 pub use fuzzy::*;
 pub use diff::*;
 pub use hash::*;
+pub use encoding::*;
+pub use jsonc::*;
 
 #[napi]
 pub fn hello() -> String {

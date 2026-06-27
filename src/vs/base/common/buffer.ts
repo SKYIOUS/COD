@@ -5,6 +5,7 @@
 
 import { Lazy } from './lazy.js';
 import * as streams from './stream.js';
+import { nativeEncodeHexSync, nativeDecodeHexSync, nativeEncodeBase64Sync, nativeDecodeBase64Sync } from './native/native.js';
 
 interface NodeBuffer {
 	allocUnsafe(size: number): Uint8Array;
@@ -364,6 +365,8 @@ export function prefixedBufferStream(prefix: VSBuffer, stream: VSBufferReadableS
 
 /** Decodes base64 to a uint8 array. URL-encoded and unpadded base64 is allowed. */
 export function decodeBase64(encoded: string) {
+	const native = nativeDecodeBase64Sync(encoded);
+	if (native !== undefined) { return VSBuffer.wrap(native); }
 	let building = 0;
 	let remainder = 0;
 	let bufi = 0;
@@ -429,6 +432,8 @@ const base64UrlSafeAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
 
 /** Encodes a buffer to a base64 string. */
 export function encodeBase64({ buffer }: VSBuffer, padded = true, urlSafe = false) {
+	const native = nativeEncodeBase64Sync(buffer, padded, urlSafe);
+	if (native !== undefined) { return native; }
 	const dictionary = urlSafe ? base64UrlSafeAlphabet : base64Alphabet;
 	let output = '';
 
@@ -463,18 +468,21 @@ export function encodeBase64({ buffer }: VSBuffer, padded = true, urlSafe = fals
 	return output;
 }
 
-const hexChars = '0123456789abcdef';
 export function encodeHex({ buffer }: VSBuffer): string {
+	const native = nativeEncodeHexSync(buffer);
+	if (native !== undefined) { return native; }
 	let result = '';
 	for (let i = 0; i < buffer.length; i++) {
 		const byte = buffer[i];
-		result += hexChars[byte >>> 4];
-		result += hexChars[byte & 0x0f];
+		result += '0123456789abcdef'[byte >>> 4];
+		result += '0123456789abcdef'[byte & 0x0f];
 	}
 	return result;
 }
 
 export function decodeHex(hex: string): VSBuffer {
+	const native = nativeDecodeHexSync(hex);
+	if (native !== undefined) { return VSBuffer.wrap(native); }
 	if (hex.length % 2 !== 0) {
 		throw new SyntaxError('Hex string must have an even length');
 	}

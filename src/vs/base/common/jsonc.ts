@@ -1,7 +1,4 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+import { nativeParseJsoncSync } from './native/native.js';
 
 // First group matches a double quoted string
 // Second group matches a single quoted string
@@ -53,6 +50,15 @@ export function stripComments(content: string): string {
  * @returns the parsed content as JSON
 */
 export function parse<T>(content: string): T {
+	// Try native Rust implementation first for performance
+	const nativeResult = nativeParseJsoncSync<T>(content);
+	if (nativeResult !== undefined) {
+		if (nativeResult.ok) {
+			return nativeResult.value;
+		}
+		// Native parsing failed, fall through to JS path
+	}
+
 	const commentsStripped = stripComments(content);
 
 	try {

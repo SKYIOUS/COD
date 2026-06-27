@@ -1,0 +1,46 @@
+name: RISC-V 64 Cross-Compile
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-riscv64:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [riscv64gc-unknown-linux-gnu]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+
+      - name: Build native crate
+        run: |
+          export CC_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-gcc
+          export CXX_riscv64gc_unknown_linux_gnu=riscv64-linux-gnu-g++
+          export CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc
+          cargo build --release --target ${{ matrix.target }} -p cod-native
+        working-directory: .
+
+      - name: Build CLI
+        run: |
+          cargo build --release --target ${{ matrix.target }} -p cod-cli
+        working-directory: .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cod-riscv64
+          path: target/${{ matrix.target }}/release/cod-cli

@@ -34,8 +34,15 @@
 	"nodejsArtifactFeed": "",
 	"electronArtifactFeed": "",
 	"urlProtocol": "cod",
-	"agentsTelemetryAppName": "agents",
-	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
+	"extensionsGallery": {
+		"serviceUrl": "https://open-vsx.org/api",
+		"publisherUrl": "https://open-vsx.org/publishers/{publisher}",
+		"itemUrl": "https://open-vsx.org/items/{publisher}.{name}",
+		"resourceUrlTemplate": "https://open-vsx.org/api/-/download?itemName={publisher}.{name}&version={version}&targetPlatform={targetPlatform}"
+	},
+	"updateUrl": "https://github.com/SKYIOUS/COD/releases",
+	"downloadUrl": "https://github.com/SKYIOUS/COD/releases",
+	"webviewContentExternalBaseUrlTemplate": "",
 	"builtInExtensions": [],
 	"defaultChatAgent": null,
 	"trustedExtensionAuthAccess": {

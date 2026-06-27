@@ -187,4 +187,7 @@ import './contrib/processExplorer/browser/processExplorer.web.contribution.js';
 // Browser View
 import './contrib/browserView/browser/browserView.contribution.js';
 
+// Privacy
+import './contrib/privacy/browser/privacy.contribution.js';
+
 //#endregion

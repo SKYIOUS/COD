@@ -1,0 +1,63 @@
+{
+  "name": "ollama",
+  "displayName": "Ollama",
+  "description": "Local AI chat powered by Ollama",
+  "version": "1.0.0",
+  "publisher": "cod",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.127.0"
+  },
+  "main": "./out/extension",
+  "browser": "./out/browser/extension",
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "activationEvents": [
+    "onLanguageModelChat:ollama"
+  ],
+  "enabledApiProposals": [
+    "chatProvider"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+    "languageModelChatProviders": [
+      {
+        "vendor": "ollama",
+        "displayName": "Ollama",
+        "configuration": {
+          "properties": {
+            "url": {
+              "type": "string",
+              "default": "http://localhost:11434",
+              "description": "Ollama server URL"
+            },
+            "model": {
+              "type": "string",
+              "default": "llama3.2",
+              "description": "Default model to use"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:ollama",
+    "watch": "gulp watch-extension:ollama",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "24.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SKYIOUS/COD"
+  }
+}
