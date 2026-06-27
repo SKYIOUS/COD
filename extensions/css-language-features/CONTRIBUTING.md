@@ -1,7 +1,7 @@
 
 ## Setup
 
-- Clone [microsoft/vscode](https://github.com/microsoft/vscode)
+- Clone [SKYIOUS/COD](https://github.com/SKYIOUS/COD)
 - Run `npm i` at `/`, this will install
 	- Dependencies for `/extension/css-language-features/`
 	- Dependencies for `/extension/css-language-features/server/`
@@ -9,7 +9,7 @@
 
 - Open `/extensions/css-language-features/` as the workspace in VS Code
 - In `/extensions/css-language-features/` run `npm run compile`(or `npm run watch`) to build the client and server
-- Run the [`Launch Extension`](https://github.com/microsoft/vscode/blob/master/extensions/css-language-features/.vscode/launch.json) debug target in the Debug View. This will:
+- Run the [`Launch Extension`](https://github.com/SKYIOUS/COD/blob/main/extensions/css-language-features/.vscode/launch.json) debug target in the Debug View. This will:
 	- Launch a new VS Code instance with the `css-language-features` extension loaded
 - Open a `.css` file to activate the extension. The extension will start the CSS language server process.
 - Add `"css.trace.server": "verbose"` to the settings to observe the communication between client and server in the `CSS Language Server` output.

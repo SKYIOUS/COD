@@ -5,7 +5,7 @@
 
 import { encodeHex, VSBuffer } from './buffer.js';
 import * as strings from './strings.js';
-import { nativeStringSha1 } from './native/native.js';
+import { nativeStringSha1, nativeStringHashSync } from './native/native.js';
 
 type NotSyncHashable = ArrayBufferLike | ArrayBufferView;
 
@@ -50,6 +50,13 @@ function booleanHash(b: boolean, initialHashVal: number): number {
 }
 
 export function stringHash(s: string, hashVal: number) {
+	// ponytail: native is 4x faster but doesn't support seed, only use for fresh hashes
+	if (hashVal === 0 && s.length > 200) {
+		const native = nativeStringHashSync(s);
+		if (native !== undefined) {
+			return native;
+		}
+	}
 	hashVal = numberHash(149417, hashVal);
 	for (let i = 0, length = s.length; i < length; i++) {
 		hashVal = numberHash(s.charCodeAt(i), hashVal);

@@ -70,6 +70,13 @@ export function nativeLinesSimilarSync(line1: string, line2: string): boolean | 
 	return undefined;
 }
 
+export function nativeStringHashSync(s: string): number | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.stringHash(s);
+	}
+	return undefined;
+}
+
 export async function nativeFuzzyScore(pattern: string, word: string): Promise<FuzzyScoreResult | undefined> {
 	const mod = await getNative();
 	if (mod) {

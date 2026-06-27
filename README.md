@@ -47,7 +47,7 @@ All native calls have sync + async JS fallbacks. Zero risk — Rust is optional.
 
 ```bash
 # Prerequisites: Node.js 24+, Rust nightly, Python 3
-git clone https://github.com/your-org/cod
+git clone https://github.com/SKYIOUS/COD
 cd cod
 
 # Install dependencies
@@ -111,4 +111,5 @@ See the full results in [COMPARISON.md](COMPARISON.md).
 
 Licensed under the [MIT](LICENSE.txt) license.
 
+Website: [SKYIOUS.github.io/COD](https://SKYIOUS.github.io/COD)
 Original [VS Code](https://github.com/microsoft/vscode) by Microsoft Corporation.

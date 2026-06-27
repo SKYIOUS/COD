@@ -1,17 +1,17 @@
-# VS Code Release Sanity Check Tests
+# COD Release Sanity Check Tests
 
 ## Overview
 
-Automated end-to-end release sanity tests for published VS Code builds.
+Automated end-to-end release sanity tests for published COD builds.
 These tests verify critical functionality across different platforms and installation methods,
 ensuring that published builds meet quality standards before reaching end users.
 
-See [Sanity Check wiki page](https://github.com/microsoft/vscode/wiki/Sanity-Check) for more details on sanity testing.
+See [Sanity Check](https://github.com/SKYIOUS/COD/wiki/Sanity-Check) for more details on sanity testing.
 
 ## Usage
 
 Many tests will use the underlying platform to install and verify basic VS Code functionality.
-Such tests will need to be run on the corresponding target OS/virtual machine and will fail if ran outside.
+Such tests will need to be run on the corresponding target OS/virtual machine and will fail if run outside.
 Use -g or -f command-line options to filter tests to match the host platform.
 
 ### Command-Line Options
@@ -83,7 +83,7 @@ Each container includes:
 - Node.js 22.x runtime
 - X11 server (Xvfb) for headless desktop testing
 - D-Bus for desktop integration
-- Architecture-specific VS Code dependencies
+- Architecture-specific COD dependencies
 
 Some containers include web browser used for validating web server targets.
 
@@ -145,7 +145,7 @@ For the following platforms only downloads are validated (and not install/runtim
 
 The following public documentation pages provide details on end-user VS Code setup scenarios.
 
-- [Download VS Code](https://code.visualstudio.com/Download)
+- [Download VS Code](https://code.visualstudio.com/Download) (COD is a fork, see our [docs](https://SKYIOUS.github.io/COD))
 - [Requirements](https://code.visualstudio.com/docs/supporting/requirements)
 - [Setup Overview](https://code.visualstudio.com/docs/setup/setup-overview)
 - [Linux Setup](https://code.visualstudio.com/docs/setup/linux)

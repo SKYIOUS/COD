@@ -8,7 +8,7 @@ import { LRUCache } from './map.js';
 import { getKoreanAltChars } from './naturalLanguage/korean.js';
 import { tryNormalizeToBase } from './normalization.js';
 import * as strings from './strings.js';
-import { nativeFuzzyScore } from './native/native.js';
+import { nativeFuzzyScore, nativeFuzzyScoreSync } from './native/native.js';
 
 export interface IFilter {
 	// Returns null if word doesn't match.
@@ -688,6 +688,14 @@ export function fuzzyScore(pattern: string, patternLow: string, patternStart: nu
 
 	if (patternStart >= patternLen || wordStart >= wordLen || (patternLen - patternStart) > (wordLen - wordStart)) {
 		return undefined;
+	}
+
+	// ponytail: native fast path for simple match (no offsets)
+	if (patternStart === 0 && wordStart === 0) {
+		const nativeResult = nativeFuzzyScoreSync(pattern, word);
+		if (nativeResult) {
+			return [nativeResult.score, 0, ...nativeResult.matches];
+		}
 	}
 
 	// Run a simple check if the characters of pattern occur

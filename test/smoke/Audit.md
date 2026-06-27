@@ -1,8 +1,8 @@
-# VS Code Smoke Tests Failures History
+# COD Smoke Tests Failures History
 
 This file contains a history of smoke test failures which could be avoided if particular techniques were used in the test (e.g. binding test elements with HTML5 `data-*` attribute).
 
-To better understand what can be employed in smoke test to ensure its stability, it is important to understand patterns that led to smoke test breakage. This markdown is a result of work on [this issue](https://github.com/microsoft/vscode/issues/27906).
+To better understand what can be employed in smoke test to ensure its stability, it is important to understand patterns that led to smoke test breakage.
 
 ## Log
 
