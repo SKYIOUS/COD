@@ -145,7 +145,7 @@ For the following platforms only downloads are validated (and not install/runtim
 
 The following public documentation pages provide details on end-user VS Code setup scenarios.
 
-- [Download VS Code](https://code.visualstudio.com/Download) (COD is a fork, see our [docs](https://SKYIOUS.github.io/COD))
+- [Download VS Code](https://code.visualstudio.com/Download) (COD is a fork, see our [docs](https://skyious.github.io/cod))
 - [Requirements](https://code.visualstudio.com/docs/supporting/requirements)
 - [Setup Overview](https://code.visualstudio.com/docs/setup/setup-overview)
 - [Linux Setup](https://code.visualstudio.com/docs/setup/linux)
