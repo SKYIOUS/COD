@@ -15,7 +15,9 @@
     "Chat"
   ],
   "activationEvents": [
-    "onLanguageModelChat:ollama"
+    "onLanguageModelChat:ollama",
+    "onCommand:ollama.selectModel",
+    "onCommand:ollama.checkStatus"
   ],
   "enabledApiProposals": [
     "chatProvider"
@@ -27,6 +29,31 @@
     }
   },
   "contributes": {
+    "commands": [
+      {
+        "command": "ollama.selectModel",
+        "title": "Ollama: Select Model"
+      },
+      {
+        "command": "ollama.checkStatus",
+        "title": "Ollama: Check Connection Status"
+      }
+    ],
+    "configuration": {
+      "title": "Ollama",
+      "properties": {
+        "ollama.url": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama server URL"
+        },
+        "ollama.model": {
+          "type": "string",
+          "default": "llama3.2",
+          "description": "Default model to use"
+        }
+      }
+    },
     "languageModelChatProviders": [
       {
         "vendor": "ollama",

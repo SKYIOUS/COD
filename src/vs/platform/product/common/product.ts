@@ -71,23 +71,27 @@ else {
 			licenseName: 'MIT',
 			licenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
 			serverLicenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
-			defaultChatAgent: {
-				extensionId: 'GitHub.copilot',
-				chatExtensionId: 'GitHub.copilot-chat',
-				provider: {
-					default: {
-						id: 'github',
-						name: 'GitHub',
-					},
-					enterprise: {
-						id: 'github-enterprise',
-						name: 'GitHub Enterprise',
-					}
-				},
-				providerScopes: []
-			}
 		});
 	}
+}
+
+// ponytail: null fallback for forks without Copilot extension
+if (!product.defaultChatAgent) {
+	(product as unknown as Record<string, unknown>).defaultChatAgent = {
+		extensionId: 'cod.ollama',
+		chatExtensionId: 'cod.ollama',
+		provider: {
+			default: {
+				id: 'github',
+				name: 'GitHub',
+			},
+			enterprise: {
+				id: 'github-enterprise',
+				name: 'GitHub Enterprise',
+			}
+		},
+		providerScopes: []
+	};
 }
 
 export default product;

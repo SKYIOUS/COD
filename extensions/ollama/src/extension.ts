@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import * as vscode from 'vscode';
 
 const OLLAMA_DEFAULT_URL = 'http://localhost:11434';
@@ -7,6 +12,33 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.lm.registerLanguageModelChatProvider('ollama', provider)
 	);
+
+	context.subscriptions.push(vscode.commands.registerCommand('ollama.selectModel', async () => {
+		const config = vscode.workspace.getConfiguration('ollama');
+		const url = config.get<string>('url') || OLLAMA_DEFAULT_URL;
+		try {
+			const res = await fetch(`${url}/api/tags`);
+			if (!res.ok) { throw new Error(); }
+			const data: any = await res.json();
+			const models = (data.models || []).map((m: any) => m.name);
+			if (models.length === 0) { vscode.window.showInformationMessage('No models found. Pull one via `ollama pull`.', 'OK'); return; }
+			const picked = await vscode.window.showQuickPick(models, { placeHolder: 'Select a model' });
+			if (picked) { await config.update('model', picked, vscode.ConfigurationTarget.Global); vscode.window.showInformationMessage(`Ollama model set to: ${picked}`); }
+		} catch { vscode.window.showErrorMessage('Cannot connect to Ollama. Is it running?'); }
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('ollama.checkStatus', async () => {
+		const config = vscode.workspace.getConfiguration('ollama');
+		const url = config.get<string>('url') || OLLAMA_DEFAULT_URL;
+		try {
+			const res = await fetch(`${url}/api/tags`);
+			if (res.ok) {
+				const data: any = await res.json();
+				const count = (data.models || []).length;
+				vscode.window.showInformationMessage(`Ollama connected at ${url} — ${count} model(s) available.`);
+			} else { vscode.window.showErrorMessage(`Ollama at ${url} returned ${res.status}.`); }
+		} catch { vscode.window.showErrorMessage(`Cannot reach Ollama at ${url}.`); }
+	}));
 }
 
 class OllamaLanguageModelProvider implements vscode.LanguageModelChatProvider {
