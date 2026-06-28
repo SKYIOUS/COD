@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COD — Rust-Accelerated Code Editor</title>
+  <meta name="description" content="COD is a fork of VS Code — stripped of Copilot, Microsoft sign-in, and telemetry, accelerated with native Rust modules." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <span class="logo">&lt;COD /&gt;</span>
+      <div class="nav-links">
+        <a href="#performance">Performance</a>
+        <a href="#modules">Native</a>
+        <a href="#removed">What's Removed</a>
+        <a href="https://github.com/SKYIOUS/COD" class="nav-gh" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="grain"></div>
+    <div class="hero-grid-bg"></div>
+    <div class="hero-content">
+      <div class="hero-badge">v1.127.0 · Rust-Accelerated</div>
+      <h1 class="hero-title">
+        <span class="hero-title-line">Unburdened.</span>
+        <span class="hero-title-line accent">Accelerated.</span>
+        <span class="hero-title-line">Yours.</span>
+      </h1>
+      <p class="hero-sub">
+        A fork of VS Code — stripped of Copilot, Microsoft sign-in, and telemetry.<br />
+        Accelerated with native Rust modules. Open source. MIT.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/SKYIOUS/COD/releases" class="btn btn-primary">Download COD</a>
+        <a href="https://github.com/SKYIOUS/COD" class="btn btn-outline">View on GitHub</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-value">822ms</span>
+          <span class="stat-label">Startup</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">30MB</span>
+          <span class="stat-label">Idle RAM</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">15x</span>
+          <span class="stat-label">Fuzzy Search</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-glow"></div>
+  </section>
+
+  <section id="performance" class="section perf-section">
+    <div class="section-label">Performance</div>
+    <h2 class="section-title">2x faster startup.<br /><span class="accent">3.3x less RAM.</span></h2>
+    <p class="section-sub">Measured cold launch, single file, same hardware. Rust-native modules make the hottest code paths fly.</p>
+    <div class="bench-grid">
+      <div class="bench-card">
+        <h3>Startup to Window</h3>
+        <div class="bench-bar-group">
+          <div class="bench-row">
+            <span class="bench-label">COD</span>
+            <div class="bench-track"><div class="bench-fill cod" style="width:50%"><span>822ms</span></div></div>
+          </div>
+          <div class="bench-row">
+            <span class="bench-label">VS Code</span>
+            <div class="bench-track"><div class="bench-fill vsc" style="width:100%"><span>1,644ms</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="bench-card">
+        <h3>Idle Memory</h3>
+        <div class="bench-bar-group">
+          <div class="bench-row">
+            <span class="bench-label">COD</span>
+            <div class="bench-track"><div class="bench-fill cod" style="width:30%"><span>30MB</span></div></div>
+          </div>
+          <div class="bench-row">
+            <span class="bench-label">VS Code</span>
+            <div class="bench-track"><div class="bench-fill vsc" style="width:100%"><span>98MB</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="bench-card">
+        <h3>Threads (Idle)</h3>
+        <div class="bench-bar-group">
+          <div class="bench-row">
+            <span class="bench-label">COD</span>
+            <div class="bench-track"><div class="bench-fill cod" style="width:41%"><span>19</span></div></div>
+          </div>
+          <div class="bench-row">
+            <span class="bench-label">VS Code</span>
+            <div class="bench-track"><div class="bench-fill vsc" style="width:100%"><span>46</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="bench-footnote">AMD Ryzen 7 7730U · Windows 11 · COD repository (248K files)</p>
+  </section>
+
+  <section id="modules" class="section modules-section">
+    <div class="section-label">Native Acceleration</div>
+    <h2 class="section-title">Rust where it counts.</h2>
+    <p class="section-sub">Four Rust modules via napi-rs. Zero risk — sync + async JS fallbacks on every function.</p>
+    <div class="modules-grid">
+      <div class="module-card">
+        <div class="module-icon"><span class="icon-fuzzy">~</span></div>
+        <h3>fuzzy</h3>
+        <p class="module-desc">Fuzzy scoring, search, query preparation</p>
+        <div class="module-speed">up to <strong>15x</strong></div>
+      </div>
+      <div class="module-card">
+        <div class="module-icon"><span class="icon-diff">Δ</span></div>
+        <h3>diff</h3>
+        <p class="module-desc">Myers diff, LCS, line similarity</p>
+        <div class="module-speed">up to <strong>10x</strong></div>
+      </div>
+      <div class="module-card">
+        <div class="module-icon"><span class="icon-hash">#</span></div>
+        <h3>hash</h3>
+        <p class="module-desc">SHA-1, string/number/object hashing</p>
+        <div class="module-speed">up to <strong>19x</strong></div>
+      </div>
+      <div class="module-card">
+        <div class="module-icon"><span class="icon-safe">✓</span></div>
+        <h3>Zero Risk</h3>
+        <p class="module-desc">All 11 functions have JS fallbacks</p>
+        <div class="module-speed">Rust <strong>optional</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="removed" class="section removed-section">
+    <div class="section-label">What's Gone</div>
+    <h2 class="section-title">Stripped to the bone.<br /><span class="accent">Nothing you didn't ask for.</span></h2>
+    <div class="removed-grid">
+      <div class="removed-card">
+        <div class="removed-icon">✕</div>
+        <h3>GitHub Copilot</h3>
+        <p>No Copilot UI, commands, chat, status bar, or agent. All removed.</p>
+      </div>
+      <div class="removed-card">
+        <div class="removed-icon">✕</div>
+        <h3>Microsoft Sign-In</h3>
+        <p>No auth prompts, no account hub, no identity baggage.</p>
+      </div>
+      <div class="removed-card">
+        <div class="removed-icon">✕</div>
+        <h3>Telemetry</h3>
+        <p>No crash reporting, no usage data, no phone-home.</p>
+      </div>
+      <div class="removed-card">
+        <div class="removed-icon">✕</div>
+        <h3>Copilot Chat</h3>
+        <p>No chat tips, no onboarding tour, no agent chat.</p>
+      </div>
+      <div class="removed-card">
+        <div class="removed-icon">✕</div>
+        <h3>Debug Prompts</h3>
+        <p>No nag dialogs to install debug extensions.</p>
+      </div>
+      <div class="removed-card">
+        <div class="removed-icon">✕</div>
+        <h3>Welcome Tour</h3>
+        <p>Welcome page stripped to essentials. No onboarding wizard.</p>
+      </div>
+    </div>
+    <div class="retained-note">Everything else you love about VS Code? Still here. IntelliSense, debugging, Git, extensions, remote dev, terminal, themes.</div>
+  </section>
+
+  <section class="section cta-section">
+    <div class="cta-glow"></div>
+    <h2 class="section-title">Build from source.<br /><span class="accent">Run your benchmarks.</span></h2>
+    <div class="cta-code">
+      <pre><code>git clone https://github.com/SKYIOUS/COD
+<span class="code-dir">cd COD</span>
+npm install
+npm run compile:native
+npm run compile
+.\scripts\code.bat</code></pre>
+    </div>
+    <div class="hero-actions">
+      <a href="https://github.com/SKYIOUS/COD" class="btn btn-primary">Star on GitHub</a>
+      <a href="https://github.com/SKYIOUS/COD/releases" class="btn btn-outline">Download Release</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="logo">&lt;COD /&gt;</span>
+      <p class="footer-text">MIT Licensed · Built on <a href="https://github.com/microsoft/vscode">VS Code</a> by Microsoft</p>
+      <div class="footer-links">
+        <a href="https://github.com/SKYIOUS/COD">GitHub</a>
+        <a href="https://github.com/SKYIOUS/COD/blob/main/LICENSE.txt">License</a>
+        <a href="https://github.com/SKYIOUS/COD/issues">Issues</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+# Build COD installer and publish to GitHub Releases
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: Release type
+        required: true
+        default: prerelease
+        type: choice
+        options:
+          - prerelease
+          - release
+      version_tag:
+        description: Git tag to create (e.g., v1.127.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build COD installer
+    runs-on: windows-latest
+    timeoutInMinutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Compile Rust native module
+        run: npm run compile:native
+
+      - name: Compile COD
+        run: npm run gulp vscode-win32-x64-min
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Build InnoSetup updater
+        run: npm run gulp vscode-win32-x64-inno-updater
+
+      - name: Build user installer
+        run: npm run gulp vscode-win32-x64-user-setup
+
+      - name: Build system installer
+        run: npm run gulp vscode-win32-x64-system-setup
+
+      - name: Rename installers with version
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          mkdir release -Force
+
+          if (Test-Path ".build\win32-x64\user-setup\VSCodeSetup.exe") {
+            Copy-Item ".build\win32-x64\user-setup\VSCodeSetup.exe" "release\CODUserSetup-x64-$version.exe"
+          }
+          if (Test-Path ".build\win32-x64\system-setup\VSCodeSetup.exe") {
+            Copy-Item ".build\win32-x64\system-setup\VSCodeSetup.exe" "release\CODSetup-x64-$version.exe"
+          }
+          if (Test-Path "..\VSCode-win32-x64") {
+            Compress-Archive -Path "..\VSCode-win32-x64\*" -DestinationPath "release\COD-win32-x64-$version.zip"
+          }
+
+      - name: Create Git tag
+        run: |
+          git tag ${{ inputs.version_tag }}
+          git push origin ${{ inputs.version_tag }}
+        shell: pwsh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version_tag }}
+          name: ${{ inputs.version_tag }}
+          prerelease: ${{ inputs.release_type == 'prerelease' }}
+          files: release/*
+          generate_release_notes: true

@@ -60,3 +60,9 @@ benchmark-results.json
 .github/prompts/*.local.prompt.md
 .agents/skills/.local/
 .github/skills/.local/
+
+# Benchmark artifacts
+.bench_results.json
+.bench_workspace/
+__pycache__/
+install.log

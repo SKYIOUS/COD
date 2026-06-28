@@ -381,7 +381,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			all = es.merge(all, gulp.src([
 				'resources/win32/bower.ico',
 				'resources/win32/c.ico',
-				'resources/win32/code.ico',
+				'resources/win32/cod.ico',
 				'resources/win32/config.ico',
 				'resources/win32/cpp.ico',
 				'resources/win32/csharp.ico',
@@ -407,8 +407,8 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 				'resources/win32/vue.ico',
 				'resources/win32/xml.ico',
 				'resources/win32/yaml.ico',
-				'resources/win32/code_70x70.png',
-				'resources/win32/code_150x150.png'
+				'resources/win32/cod_70x70.png',
+				'resources/win32/cod_150x150.png'
 			], { base: '.' }));
 
 		// Include COD native module
@@ -419,7 +419,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 	} else if (platform === 'linux') {
 			const policyDest = gulp.src('.build/policies/linux/**', { base: '.build/policies/linux' })
 				.pipe(rename(f => f.dirname = `policies/${f.dirname}`));
-			all = es.merge(all, gulp.src('resources/linux/code.png', { base: '.' }), policyDest);
+			all = es.merge(all, gulp.src('resources/linux/cod.png', { base: '.' }), policyDest);
 		} else if (platform === 'darwin') {
 			const shortcut = gulp.src('resources/darwin/bin/code.sh')
 				.pipe(replace('@@APPNAME@@', product.applicationName))
@@ -538,9 +538,9 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 }
 
 function hasAuthenticodeSignature(filePath: string): Promise<boolean> {
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve) => {
 		const proc = cp.spawn('signtool.exe', ['verify', '/pa', filePath]);
-		proc.on('error', reject);
+		proc.on('error', () => resolve(false));
 		proc.on('exit', code => resolve(code === 0));
 	});
 }
@@ -612,8 +612,6 @@ function prepareCopilotRipgrepShimTask(platform: string, arch: string, destinati
 	const outputDir = path.join(path.dirname(root), destinationFolderName);
 
 	return async () => {
-		// On Windows with win32VersionedUpdate, app resources live under a
-		// commit-hash prefix: {output}/{commitHash}/resources/app/
 		const versionedResourcesFolder = util.getVersionedResourcesFolder(platform, commit!);
 		const appBase = platform === 'darwin'
 			? path.join(outputDir, `${product.nameLong}.app`, 'Contents', 'Resources', 'app')
@@ -621,6 +619,11 @@ function prepareCopilotRipgrepShimTask(platform: string, arch: string, destinati
 		const appNodeModulesDir = path.join(appBase, 'node_modules');
 
 		const builtInCopilotExtensionDir = path.join(appBase, 'extensions', 'copilot');
+		// ponytail: skip if copilot SDK not present (COD removes it)
+		if (!fs.existsSync(builtInCopilotExtensionDir)) {
+			console.log('[prepareCopilotRipgrepShim] Copilot extension not found, skipping');
+			return;
+		}
 		prepareBuiltInCopilotRipgrepShim(platform, arch, builtInCopilotExtensionDir, appNodeModulesDir);
 	};
 }
@@ -707,8 +710,9 @@ BUILD_TARGETS.forEach(buildTarget => {
 export function compileNativeTask() {
 	return async () => {
 		console.log('Compiling COD native module (Rust)...');
-		await promisify(cp.exec)('cargo build --release', { cwd: path.join(__dirname, '..', '..', 'native'), maxBuffer: 1024 * 1024 });
-		const nativeDir = path.join(__dirname, '..', '..', 'native');
+		const repoPath = path.dirname(import.meta.dirname);
+		await promisify(cp.exec)('cargo build --release', { cwd: path.join(repoPath, 'native'), maxBuffer: 1024 * 1024 });
+		const nativeDir = path.join(repoPath, 'native');
 		const targetDir = path.join(nativeDir, 'target', 'release');
 		const files = fs.readdirSync(targetDir).filter(f => f.endsWith('.dll') || f.endsWith('.so') || f.endsWith('.dylib') || f.endsWith('.node'));
 		for (const f of files) {

@@ -1,18 +1,18 @@
 {
-	"name": "Code - OSS",
-	"short_name": "Code- OSS",
+	"name": "COD Editor",
+	"short_name": "COD",
 	"start_url": "/",
 	"lang": "en-US",
 	"display": "standalone",
 	"display_override": ["window-controls-overlay"],
 	"icons": [
 		{
-			"src": "code-192.png",
+			"src": "cod-192.png",
 			"type": "image/png",
 			"sizes": "192x192"
 		},
 		{
-			"src": "code-512.png",
+			"src": "cod-512.png",
 			"type": "image/png",
 			"sizes": "512x512"
 		}
