@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "cli",
+    "native",
+    "build/win32",
+]
+resolver = "2"
