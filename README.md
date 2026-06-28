@@ -111,5 +111,5 @@ See the full results in [COMPARISON.md](COMPARISON.md).
 
 Licensed under the [MIT](LICENSE.txt) license.
 
-Website: [skyious.github.io/cod](https://skyious.github.io/cod)
+Website: [skyious.github.io/cod](https://skyious.github.io/COD)
 Original [VS Code](https://github.com/microsoft/vscode) by Microsoft Corporation.
