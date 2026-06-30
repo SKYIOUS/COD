@@ -37,10 +37,15 @@ dist
 .playwright-mcp
 .claude/
 
-# Rust native crate outputs
+# Rust / Cargo outputs
+/target/
 /native/target/
 /native/*.node
 /native/index.js
+/build/win32/target/
+
+# Packaged build output
+/.build/VSCode-win32-*/
 
 # Benchmark artifacts
 benchmark-*.cjs

@@ -1,0 +1,43 @@
+name: Performance Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: Number of benchmark iterations
+        required: false
+        default: '6'
+        type: string
+      benchmark_type:
+        description: Type of benchmark to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - colorize
+          - startup
+          - hash
+
+jobs:
+  benchmark:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: npm ci
+      - run: npm run compile
+      - name: Run colorize benchmarks
+        if: inputs.benchmark_type == 'all' || inputs.benchmark_type == 'colorize'
+        run: node scripts/code-perf.js --build .build/VSCode-win32-x64/COD.exe
+        timeout-minutes: 30
+      - name: Run Rust native benchmarks
+        run: cargo bench -p cod_native
+        working-directory: native
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: benchmark-results.json

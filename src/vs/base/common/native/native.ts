@@ -8,7 +8,15 @@ export interface FuzzyScoreResult {
 	matches: number[];
 }
 
-interface CodNativeModule {
+
+
+export interface JsoncParseResult {
+	ok: boolean;
+	value: string | undefined;
+	error: string | undefined;
+}
+
+export interface CodNativeModule {
 	fuzzyScore(pattern: string, word: string): FuzzyScoreResult | undefined;
 	scoreFuzzy(target: string, query: string, queryLower: string, allowNonContiguous: boolean): FuzzyScoreResult;
 	stringSha1(input: string): string;
@@ -22,12 +30,7 @@ interface CodNativeModule {
 	nativeEncodeBase64(input: Uint8Array, padded?: boolean, urlSafe?: boolean): string;
 	nativeDecodeBase64(input: string): Uint8Array;
 	parseJsonc(content: string): JsoncParseResult;
-}
-
-export interface JsoncParseResult {
-	ok: boolean;
-	value: string | undefined;
-	error: string | undefined;
+	codLogoHtml(): string;
 }
 
 let nativeModule: CodNativeModule | null | undefined = undefined;
@@ -146,6 +149,13 @@ export function nativeEncodeHexSync(input: Uint8Array): string | undefined {
 export function nativeDecodeHexSync(hex: string): Uint8Array | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.nativeDecodeHex(hex);
+	}
+	return undefined;
+}
+
+export function nativeCodLogoHtmlSync(): string | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.codLogoHtml();
 	}
 	return undefined;
 }

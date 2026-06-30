@@ -1,0 +1,35 @@
+name: Rust Native CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    paths:
+      - 'native/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            native/target
+            ~/.cargo/registry
+          key: ${{ runner.os }}-native-${{ hashFiles('native/Cargo.toml', 'native/Cargo.lock') }}
+      - run: rustup show
+      - run: cargo build --release -p cod_native
+        working-directory: native
+      - run: cargo test --release -p cod_native
+        working-directory: native

@@ -11,4 +11,5 @@ declare module 'cod-native' {
 	export function prepareQuery(query: string): { query: string; queryLower: string; expectContiguous: boolean; currentAutocompleteLength: number };
 	export function computeCharScore(word: string, wordStart: number, wordLength: number, query: string, queryLength: number, allowNonContiguous: boolean): number;
 	export function linesSimilar(line1: string, line2: string): boolean;
+	export function codLogoHtml(): string;
 }

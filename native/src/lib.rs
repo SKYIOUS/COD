@@ -6,12 +6,14 @@ pub mod diff;
 pub mod hash;
 pub mod encoding;
 pub mod jsonc;
+pub mod welcome;
 
 pub use fuzzy::*;
 pub use diff::*;
 pub use hash::*;
 pub use encoding::*;
 pub use jsonc::*;
+pub use welcome::*;
 
 #[napi]
 pub fn hello() -> String {

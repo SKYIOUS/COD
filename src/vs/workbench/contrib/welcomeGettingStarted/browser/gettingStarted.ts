@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { $, Dimension, addDisposableListener, append, clearNode, reset } from '../../../../base/browser/dom.js';
+import { nativeCodLogoHtmlSync } from '../../../../base/common/native/native.js';
 import { renderFormattedText } from '../../../../base/browser/formattedTextRenderer.js';
 import { status } from '../../../../base/browser/ui/aria/aria.js';
 import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
@@ -924,6 +925,11 @@ export class GettingStartedPage extends EditorPane {
 			$('h1.product-name.caption', {}, this.productService.nameLong),
 			$('p.subtitle.description', {}, localize({ key: 'gettingStarted.editingEvolved', comment: ['Shown as subtitle on the Welcome page.'] }, "Editing evolved"))
 		);
+		// ponytail: Rust logo replaces default when native module available
+		const logoHtml = nativeCodLogoHtmlSync();
+		if (logoHtml) {
+			header.innerHTML = logoHtml;
+		}
 
 		const leftColumn = $('.categories-column.categories-column-left', {},);
 		const rightColumn = $('.categories-column.categories-column-right', {},);
