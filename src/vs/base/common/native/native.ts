@@ -16,6 +16,46 @@ export interface JsoncParseResult {
 	error: string | undefined;
 }
 
+export interface CssColorResult {
+	r: number;
+	g: number;
+	b: number;
+	a: number;
+}
+
+export interface TokenCapture {
+	start: number;
+	end: number;
+	typeName: string;
+	languageId: number;
+}
+
+export interface EncodedToken {
+	startIndex: number;
+	metadata: number;
+}
+
+export interface SearchMatch {
+	path: string;
+	lineNumber: number;
+	lineContent: string;
+	matchStart: number;
+	matchEnd: number;
+}
+
+export interface TokenSpan {
+	start: number;
+	end: number;
+	className: string;
+}
+
+export interface DecorationSpan {
+	start: number;
+	end: number;
+	className: string;
+	isInline: boolean;
+}
+
 export interface CodNativeModule {
 	fuzzyScore(pattern: string, word: string): FuzzyScoreResult | undefined;
 	scoreFuzzy(target: string, query: string, queryLower: string, allowNonContiguous: boolean): FuzzyScoreResult;
@@ -30,7 +70,22 @@ export interface CodNativeModule {
 	nativeEncodeBase64(input: Uint8Array, padded?: boolean, urlSafe?: boolean): string;
 	nativeDecodeBase64(input: string): Uint8Array;
 	parseJsonc(content: string): JsoncParseResult;
+	parseCssColor(css: string): CssColorResult | undefined;
 	codLogoHtml(): string;
+	codAboutHtml(version: string, commit: string, date: string): string;
+
+	// Tokenization
+	encodeTreeSitterCaptures(captures: TokenCapture[], themeJson: string): EncodedToken[];
+	tokensToUint32Array(tokens: EncodedToken[]): number[];
+
+	// File search
+	searchFiles(root: string, pattern: string, maxResults: number): SearchMatch[];
+	searchFilesChunked(root: string, pattern: string, maxResults: number, chunkSize: number): SearchMatch[][];
+
+	// Rendering
+	renderLineHtml(line: string, tokensJson: string, decorationsJson: string): string;
+	renderLinesHtml(lines: string[], allTokensJson: string, allDecorationsJson: string): string[];
+	renderMinimapLine(line: string, tokensJson: string, chWidth: number): string;
 }
 
 let nativeModule: CodNativeModule | null | undefined = undefined;
@@ -91,6 +146,20 @@ export function nativeStringHashSync(s: string): number | undefined {
 	return undefined;
 }
 
+export function nativeNumberHashSync(val: number, initialHash: number): number | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.numberHash(val, initialHash);
+	}
+	return undefined;
+}
+
+export function nativeObjectHashSync(obj: unknown, depth?: number): number | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.objectHash(obj, depth);
+	}
+	return undefined;
+}
+
 export async function nativeFuzzyScore(pattern: string, word: string): Promise<FuzzyScoreResult | undefined> {
 	const mod = await getNative();
 	if (mod) {
@@ -139,6 +208,22 @@ export async function nativeStringHash(s: string): Promise<number | undefined> {
 	return undefined;
 }
 
+export async function nativeNumberHash(val: number, initialHash: number): Promise<number | undefined> {
+	const mod = await getNative();
+	if (mod) {
+		return mod.numberHash(val, initialHash);
+	}
+	return undefined;
+}
+
+export async function nativeObjectHash(obj: unknown, depth?: number): Promise<number | undefined> {
+	const mod = await getNative();
+	if (mod) {
+		return mod.objectHash(obj, depth);
+	}
+	return undefined;
+}
+
 export function nativeEncodeHexSync(input: Uint8Array): string | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.nativeEncodeHex(input);
@@ -156,6 +241,13 @@ export function nativeDecodeHexSync(hex: string): Uint8Array | undefined {
 export function nativeCodLogoHtmlSync(): string | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.codLogoHtml();
+	}
+	return undefined;
+}
+
+export function nativeCodAboutHtmlSync(version: string, commit: string, date: string): string | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.codAboutHtml(version, commit, date);
 	}
 	return undefined;
 }
@@ -195,6 +287,74 @@ export async function nativeParseJsonc<T>(content: string): Promise<{ ok: true; 
 export function nativeDecodeBase64Sync(input: string): Uint8Array | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.nativeDecodeBase64(input);
+	}
+	return undefined;
+}
+
+export function nativeParseCssColorSync(css: string): CssColorResult | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.parseCssColor(css) ?? undefined;
+	}
+	return undefined;
+}
+
+export async function nativeParseCssColor(css: string): Promise<CssColorResult | undefined> {
+	const mod = await getNative();
+	if (mod) {
+		const result = await mod.parseCssColor(css);
+		return result ?? undefined;
+	}
+	return undefined;
+}
+
+// Tokenization
+export function nativeEncodeTreeSitterCapturesSync(captures: TokenCapture[], themeJson: string): EncodedToken[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.encodeTreeSitterCaptures(captures, themeJson);
+	}
+	return undefined;
+}
+
+export function nativeTokensToUint32ArraySync(tokens: EncodedToken[]): number[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.tokensToUint32Array(tokens);
+	}
+	return undefined;
+}
+
+// File search
+export function nativeSearchFilesSync(root: string, pattern: string, maxResults: number): SearchMatch[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.searchFiles(root, pattern, maxResults);
+	}
+	return undefined;
+}
+
+export function nativeSearchFilesChunkedSync(root: string, pattern: string, maxResults: number, chunkSize: number): SearchMatch[][] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.searchFilesChunked(root, pattern, maxResults, chunkSize);
+	}
+	return undefined;
+}
+
+// Rendering
+export function nativeRenderLineHtmlSync(line: string, tokensJson: string, decorationsJson: string): string | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.renderLineHtml(line, tokensJson, decorationsJson);
+	}
+	return undefined;
+}
+
+export function nativeRenderLinesHtmlSync(lines: string[], allTokensJson: string, allDecorationsJson: string): string[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.renderLinesHtml(lines, allTokensJson, allDecorationsJson);
+	}
+	return undefined;
+}
+
+export function nativeRenderMinimapLineSync(line: string, tokensJson: string, chWidth: number): string | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.renderMinimapLine(line, tokensJson, chWidth);
 	}
 	return undefined;
 }
