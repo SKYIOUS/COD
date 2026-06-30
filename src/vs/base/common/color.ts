@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CharCode } from './charCode.js';
+import { nativeParseCssColorSync } from './native/native.js';
 
 function roundFloat(number: number, decimalPoints: number): number {
 	const decimal = Math.pow(10, decimalPoints);
@@ -668,6 +669,10 @@ export namespace Color {
 			 * @see https://drafts.csswg.org/css-color/#typedef-color
 			 */
 			export function parse(css: string): Color | null {
+				const native = nativeParseCssColorSync(css);
+				if (native) {
+					return new Color(new RGBA(native.r, native.g, native.b, native.a));
+				}
 				if (css === 'transparent') {
 					return Color.transparent;
 				}

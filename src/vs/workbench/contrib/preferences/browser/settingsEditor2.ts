@@ -786,6 +786,16 @@ export class SettingsEditor2 extends EditorPane {
 	 */
 	private createHeader(parent: HTMLElement): void {
 		this.headerContainer = DOM.append(parent, $('.settings-header'));
+
+		const brandContainer = DOM.append(this.headerContainer, $('.settings-brand-container'));
+		brandContainer.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px';
+		const badge = DOM.append(brandContainer, DOM.$('span.settings-brand-badge'));
+		badge.textContent = 'C';
+		badge.style.cssText = 'display:inline-flex;width:22px;height:22px;background:#00BCA2;border-radius:5px;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#1a1a1a;flex-shrink:0';
+		const brandLabel = DOM.append(brandContainer, DOM.$('span.settings-brand-label'));
+		brandLabel.textContent = 'COD Editor';
+		brandLabel.style.cssText = 'font-size:12px;font-weight:600;color:var(--vscode-foreground);opacity:0.8';
+
 		this.searchContainer = DOM.append(this.headerContainer, $('.search-container'));
 
 		const clearInputAction = this._register(new Action(SETTINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS,

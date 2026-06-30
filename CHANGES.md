@@ -1,15 +1,5 @@
 # COD Native Rust Modules — Changes &amp; Status
 
-## Why `native/` Instead of Root
-
-The Rust native crate lives under `native/` (not root) because:
-
-- **Workspace isolation:** The root `Cargo.toml` is a workspace that also contains `cli/` (VS Code CLI) and `build/win32/` (Inno updater). Each crate compiles independently with different targets. `cod-native` is a `cdylib` (`.node` shared library), while `cli` is a binary and `build/win32` is a Windows executable.
-- **napi-rs convention:** The `napi`/`napi-derive` crates generate a Node.js N-API binding. Keeping it in `native/` keeps the napi build artifacts isolated and avoids cluttering the root with Cargo targets.
-- **Consistency:** VS Code itself has historically kept native modules in their own directories (e.g., `cli/`, `build/win32/`, `extensions/` with their own `package.json`).
-
----
-
 ## Overview
 
 Rust native modules (`napi-rs`) added to accelerate hot paths in the COD codebase. The native module compiles to `cod-native.node` and is loaded synchronously (preferred) or async via `import()`.

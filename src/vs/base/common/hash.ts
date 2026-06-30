@@ -5,7 +5,7 @@
 
 import { encodeHex, VSBuffer } from './buffer.js';
 import * as strings from './strings.js';
-import { nativeStringSha1, nativeStringHashSync } from './native/native.js';
+import { nativeStringSha1, nativeStringHashSync, nativeObjectHashSync } from './native/native.js';
 
 type NotSyncHashable = ArrayBufferLike | ArrayBufferView;
 
@@ -70,8 +70,15 @@ function arrayHash(arr: unknown[], initialHashVal: number): number {
 }
 
 function objectHash(obj: object, initialHashVal: number): number {
+	const keys = Object.keys(obj);
+	if (initialHashVal === 0 && keys.length >= 4) {
+		const native = nativeObjectHashSync(obj);
+		if (native !== undefined) {
+			return native;
+		}
+	}
 	initialHashVal = numberHash(181387, initialHashVal);
-	return Object.keys(obj).sort().reduce((hashVal, key) => {
+	return keys.sort().reduce((hashVal, key) => {
 		hashVal = stringHash(key, hashVal);
 		return doHash((obj as Record<string, unknown>)[key], hashVal);
 	}, initialHashVal);

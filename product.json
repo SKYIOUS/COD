@@ -140,6 +140,12 @@
 	],
 	"onboardingThemes": [
 		{
+			"id": "cod-dark",
+			"label": "COD Dark",
+			"themeId": "COD Dark",
+			"type": "dark"
+		},
+		{
 			"id": "dark-2026",
 			"label": "Dark 2026",
 			"themeId": "Dark 2026",

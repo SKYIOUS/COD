@@ -64,7 +64,7 @@ export class NativeDialogHandler extends AbstractDialogHandler {
 		throw new Error('Unsupported'); // we have no native API for password dialogs in Electron
 	}
 
-	async about(title: string, details: string, detailsToCopy: string): Promise<void> {
+	async about(title: string, details: string, detailsToCopy: string, htmlBody?: string): Promise<void> {
 		const { response } = await this.nativeHostService.showMessageBox({
 			type: 'info',
 			message: title,

@@ -11,6 +11,7 @@ pub mod color;
 pub mod tokenize;
 pub mod search;
 pub mod render;
+pub mod treesitter;
 
 pub use fuzzy::*;
 pub use diff::*;
@@ -22,6 +23,7 @@ pub use color::*;
 pub use tokenize::*;
 pub use search::*;
 pub use render::*;
+pub use treesitter::*;
 
 #[napi]
 pub fn hello() -> String {

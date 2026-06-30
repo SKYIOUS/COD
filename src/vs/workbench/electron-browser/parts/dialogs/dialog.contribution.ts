@@ -20,6 +20,20 @@ import { Lazy } from '../../../../base/common/lazy.js';
 import { createNativeAboutDialogDetails } from '../../../../platform/dialogs/electron-browser/dialog.js';
 import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
 
+function createCodAboutHtml(name: string, version: string, commit: string, date: string): string {
+	return `<div style="text-align:center;padding:8px 0">
+  <div style="width:72px;height:72px;background:#00BCA2;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#1a1a1a;margin:0 auto 16px">COD</div>
+  <h2 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 2px">${name}</h2>
+  <div style="font-size:12px;color:#969696;font-family:monospace;margin-bottom:4px">Version ${version}</div>
+  <div style="font-size:11px;color:#969696;margin-bottom:20px">Build ${date} · Commit ${commit}</div>
+  <div style="height:1px;background:#3c3c3c;margin:16px 0"></div>
+  <div style="font-size:12px;color:#969696;margin-bottom:20px">
+    © COD Contributors. All rights reserved.<br>
+    Built on Visual Studio Code — MIT License.
+  </div>
+</div>`;
+}
+
 export class DialogHandlerContribution extends Disposable implements IWorkbenchContribution {
 
 	static readonly ID = 'workbench.contrib.dialogHandler';
@@ -89,11 +103,8 @@ export class DialogHandlerContribution extends Disposable implements IWorkbenchC
 				else {
 					const aboutDialogDetails = createNativeAboutDialogDetails(this.productService, await this.nativeHostService.getOSProperties());
 
-					if (this.useCustomDialog) {
-						await this.browserImpl.value.about(aboutDialogDetails.title, aboutDialogDetails.details, aboutDialogDetails.detailsToCopy);
-					} else {
-						await this.nativeImpl.value.about(aboutDialogDetails.title, aboutDialogDetails.details, aboutDialogDetails.detailsToCopy);
-					}
+					const aboutHtml = createCodAboutHtml(this.productService.nameLong, this.productService.version, this.productService.commit ?? '', this.productService.date ?? '');
+					await this.browserImpl.value.about(`About ${this.productService.nameLong}`, aboutDialogDetails.details, aboutDialogDetails.detailsToCopy, aboutHtml);
 				}
 			} catch (error) {
 				result = error;

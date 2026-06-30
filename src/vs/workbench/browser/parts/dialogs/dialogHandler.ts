@@ -73,7 +73,33 @@ export class BrowserDialogHandler extends AbstractDialogHandler {
 		return { confirmed: button === 0, checkboxChecked, values };
 	}
 
-	async about(title: string, details: string, detailsToCopy: string): Promise<void> {
+	async about(title: string, details: string, detailsToCopy: string, htmlBody?: string): Promise<void> {
+
+		if (htmlBody) {
+			const { button } = await this.doShow(
+				Severity.Info,
+				title,
+				[
+					localize({ key: 'copy', comment: ['&& denotes a mnemonic'] }, "&&Copy"),
+					localize('ok', "OK")
+				],
+				undefined,
+				1,
+				undefined,
+				undefined,
+				{
+					classes: ['cod-about-dialog'],
+					markdownDetails: [{
+						markdown: { value: htmlBody, isTrusted: true, supportHtml: true }
+					}]
+				}
+			);
+
+			if (button === 0) {
+				this.clipboardService.writeText(detailsToCopy);
+			}
+			return;
+		}
 
 		const { button } = await this.doShow(
 			Severity.Info,

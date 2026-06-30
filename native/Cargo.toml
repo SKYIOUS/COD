@@ -13,6 +13,16 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 regex = "1"
 ignore = "0.4"
+rayon = "1"
+globset = "0.4"
+tree-sitter = "0.22"
+tree-sitter-rust = "0.21"
+tree-sitter-typescript = "0.21"
+tree-sitter-javascript = "0.21"
+tree-sitter-python = "0.21"
+tree-sitter-go = "0.21"
+tree-sitter-java = "0.21"
+tree-sitter-json = "0.21"
 
 [build-dependencies]
 napi-build = "2"

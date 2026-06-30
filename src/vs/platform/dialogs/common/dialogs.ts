@@ -322,7 +322,7 @@ export interface IDialogHandler {
 	/**
 	 * Present the about dialog to the user.
 	 */
-	about(title: string, details: string, detailsToCopy: string): Promise<void>;
+	about(title: string, details: string, detailsToCopy: string, htmlBody?: string): Promise<void>;
 }
 
 enum DialogKind {
@@ -452,7 +452,7 @@ export abstract class AbstractDialogHandler implements IDialogHandler {
 	abstract confirm(confirmation: IConfirmation): Promise<IConfirmationResult>;
 	abstract input(input: IInput): Promise<IInputResult>;
 	abstract prompt<T>(prompt: IPrompt<T>): Promise<IAsyncPromptResult<T>>;
-	abstract about(title: string, details: string, detailsToCopy: string): Promise<void>;
+	abstract about(title: string, details: string, detailsToCopy: string, htmlBody?: string): Promise<void>;
 }
 
 /**
