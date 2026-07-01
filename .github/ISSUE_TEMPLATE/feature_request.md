@@ -2,12 +2,22 @@
 name: Feature request
 about: Suggest an idea for this project
 title: ''
-labels: ''
+labels: enhancement
 assignees: ''
 
 ---
 
-<!-- ⚠️⚠️ Do Not Delete This! feature_request_template ⚠️⚠️ -->
-<!-- Please search existing issues to avoid creating duplicates. -->
+<!-- ⚠️ Do Not Delete This! feature_request_template ⚠️ -->
+<!-- Search existing issues to avoid creating duplicates. -->
 
-<!-- Describe the feature you'd like. -->
+**Is your feature request related to a problem? Please describe.**
+
+**Describe the solution you'd like.**
+
+**Describe alternatives you've considered.**
+
+**Would this benefit from Rust native acceleration?**
+- [ ] Yes — it's on a hot path (render, tokenize, search, layout)
+- [ ] No — infrequent or one-shot operation
+
+**Additional context.**

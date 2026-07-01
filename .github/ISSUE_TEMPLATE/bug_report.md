@@ -2,20 +2,28 @@
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: ''
+labels: bug
 assignees: ''
 
 ---
 
-<!-- ⚠️⚠️ Do Not Delete This! bug_report_template ⚠️⚠️ -->
-<!-- Search existing issues to avoid creating duplicates. -->
-<!-- 🔧 Launch with `.\scripts\code.bat --disable-extensions` to check. -->
-Does this issue occur when all extensions are disabled?: Yes/No
+<!-- ⚠️ Do Not Delete This! bug_report_template ⚠️ -->
+<!-- Search existing issues before creating a duplicate. -->
+<!-- Run `.\scripts\code.bat --disable-extensions` to check if extensions cause it. -->
 
-- COD Version: 
-- OS Version: 
+**Does this occur with all extensions disabled?:** Yes/No
 
-Steps to Reproduce:
+- **COD Version:**
+- **OS Version:**
+- **Rust native module loaded:** Yes/No (check Developer: Toggle Developer Tools → Console for `[native]` logs)
 
-1. 
+**Steps to Reproduce:**
+
+1.
 2.
+
+**Expected behavior:**
+
+**Actual behavior:**
+
+**Console errors (if any):**
