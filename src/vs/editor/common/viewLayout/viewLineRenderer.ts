@@ -13,6 +13,7 @@ import { LinePart, LinePartMetadata } from './linePart.js';
 import { OffsetRange } from '../core/ranges/offsetRange.js';
 import { InlineDecorationType } from '../viewModel/inlineDecorations.js';
 import { TextDirection } from '../model.js';
+import { nativeRenderLineNativeSync, CharacterMappingEntry } from '../../../base/common/native/native.js';
 
 export const enum RenderWhitespace {
 	None = 0,
@@ -434,8 +435,40 @@ export class RenderLineOutput2 {
 }
 
 export function renderViewLine2(input: RenderLineInput): RenderLineOutput2 {
+	if (input.lineContent.length === 0) {
+		const sb = new StringBuilder(10000);
+		const out = renderViewLine(input, sb);
+		return new RenderLineOutput2(out.characterMapping, sb.build(), out.containsForeignElements);
+	}
+
+	// ponytail: Rust native fast path
+	const resolved = resolveRenderLineInput(input);
+	const partsJson = JSON.stringify(resolved.parts.map(p => ({
+		endIndex: p.endIndex,
+		type: p.type,
+		metadata: p.metadata,
+		containsRTL: p.containsRTL,
+	})));
+	const nativeResult = nativeRenderLineNativeSync(
+		resolved.lineContent, partsJson, resolved.tabSize,
+		resolved.fauxIndentLength, resolved.startVisibleColumn,
+		resolved.spaceWidth, resolved.renderSpaceCharCode,
+		resolved.renderWhitespace, resolved.renderControlCharacters,
+		resolved.canUseHalfwidthRightwardsArrow, resolved.fontIsMonospace,
+		resolved.containsForeignElements, resolved.isOverflowing,
+		resolved.overflowingCharCount, resolved.len,
+	);
+	if (nativeResult) {
+		const entries: CharacterMappingEntry[] = JSON.parse(nativeResult.characterMappingJson);
+		const cm = new CharacterMapping(resolved.len + 1, resolved.parts.length);
+		for (const e of entries) {
+			cm.setColumnInfo(e.column, e.partIndex, e.offsetInPart, e.horizontalOffset);
+		}
+		return new RenderLineOutput2(cm, nativeResult.html, nativeResult.containsForeignElements);
+	}
+
 	const sb = new StringBuilder(10000);
-	const out = renderViewLine(input, sb);
+	const out = _renderLine(resolved, sb);
 	return new RenderLineOutput2(out.characterMapping, sb.build(), out.containsForeignElements);
 }
 

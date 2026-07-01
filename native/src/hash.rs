@@ -1,5 +1,3 @@
-
-
 #[napi]
 pub fn string_sha1(input: String) -> String {
     let bytes = input.as_bytes();
@@ -69,10 +67,7 @@ pub fn string_sha1(input: String) -> String {
         h4 = h4.wrapping_add(e);
     }
 
-    format!(
-        "{:08x}{:08x}{:08x}{:08x}{:08x}",
-        h0, h1, h2, h3, h4
-    )
+    format!("{:08x}{:08x}{:08x}{:08x}{:08x}", h0, h1, h2, h3, h4)
 }
 
 #[napi]
@@ -86,7 +81,9 @@ pub fn string_hash(s: String) -> i32 {
 
 #[napi]
 pub fn number_hash(val: i32, initial_hash: i32) -> i32 {
-    (initial_hash << 5).wrapping_sub(initial_hash).wrapping_add(val)
+    (initial_hash << 5)
+        .wrapping_sub(initial_hash)
+        .wrapping_add(val)
 }
 
 #[napi]

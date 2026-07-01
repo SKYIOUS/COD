@@ -73,6 +73,15 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+          targets: >-
+            ${{ runner.os == 'Windows' && 'aarch64-pc-windows-msvc' ||
+               runner.os == 'Linux' && 'aarch64-unknown-linux-gnu' ||
+               runner.os == 'macOS' && 'aarch64-apple-darwin' }}
+
+      - name: Install cross-compilation deps (Linux ARM64)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libxss-dev libasound2-dev gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+        shell: bash
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -93,9 +102,18 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
         shell: bash
 
-      - name: Build Rust native module (release)
+      - name: Build Rust native module (host)
         run: cargo build --release -p cod_native
         working-directory: native
+
+      - name: Cross-compile Rust native module
+        run: >
+          cargo build --release -p cod_native
+          --target ${{ runner.os == 'Windows' && 'aarch64-pc-windows-msvc' ||
+                       runner.os == 'Linux' && 'aarch64-unknown-linux-gnu' ||
+                       runner.os == 'macOS' && 'aarch64-apple-darwin' }}
+        working-directory: native
+        continue-on-error: true
 
       - name: Run Rust unit tests
         run: cargo test --release -p cod_native

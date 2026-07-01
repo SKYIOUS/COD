@@ -25,6 +25,13 @@ fn lang_from_name(name: &str) -> Option<tree_sitter::Language> {
         "go" => Some(tree_sitter_go::language()),
         "java" => Some(tree_sitter_java::language()),
         "json" => Some(tree_sitter_json::language()),
+        "c" | "h" => Some(tree_sitter_c::language()),
+        "cpp" | "c++" | "hpp" => Some(tree_sitter_cpp::language()),
+        "csharp" | "c#" => Some(tree_sitter_c_sharp::language()),
+        "css" => Some(tree_sitter_css::language()),
+        "bash" | "shell" | "sh" => Some(tree_sitter_bash::language()),
+        "ruby" | "rb" => Some(tree_sitter_ruby::language()),
+        "php" => Some(tree_sitter_php::language_php()),
         _ => None,
     }
 }
@@ -37,18 +44,22 @@ pub fn query_tree_sitter(
 ) -> TreeSitterQueryResult {
     let lang = match lang_from_name(&language) {
         Some(l) => l,
-        None => return TreeSitterQueryResult {
-            captures: Vec::new(),
-            error: format!("Unsupported language: {}", language),
-        },
+        None => {
+            return TreeSitterQueryResult {
+                captures: Vec::new(),
+                error: format!("Unsupported language: {}", language),
+            }
+        }
     };
 
     let query = match tree_sitter::Query::new(&lang, &query_string) {
         Ok(q) => q,
-        Err(e) => return TreeSitterQueryResult {
-            captures: Vec::new(),
-            error: format!("Query error: {}", e),
-        },
+        Err(e) => {
+            return TreeSitterQueryResult {
+                captures: Vec::new(),
+                error: format!("Query error: {}", e),
+            }
+        }
     };
 
     let mut parser = tree_sitter::Parser::new();
@@ -61,10 +72,12 @@ pub fn query_tree_sitter(
 
     let tree = match parser.parse(&source, None) {
         Some(t) => t,
-        None => return TreeSitterQueryResult {
-            captures: Vec::new(),
-            error: "Failed to parse source".to_string(),
-        },
+        None => {
+            return TreeSitterQueryResult {
+                captures: Vec::new(),
+                error: "Failed to parse source".to_string(),
+            }
+        }
     };
 
     let root = tree.root_node();
@@ -90,16 +103,15 @@ pub fn query_tree_sitter(
 }
 
 #[napi]
-pub fn parse_with_tree_sitter(
-    source: String,
-    language: String,
-) -> TreeSitterQueryResult {
+pub fn parse_with_tree_sitter(source: String, language: String) -> TreeSitterQueryResult {
     let lang = match lang_from_name(&language) {
         Some(l) => l,
-        None => return TreeSitterQueryResult {
-            captures: Vec::new(),
-            error: format!("Unsupported language: {}", language),
-        },
+        None => {
+            return TreeSitterQueryResult {
+                captures: Vec::new(),
+                error: format!("Unsupported language: {}", language),
+            }
+        }
     };
 
     let mut parser = tree_sitter::Parser::new();
@@ -112,10 +124,12 @@ pub fn parse_with_tree_sitter(
 
     let tree = match parser.parse(&source, None) {
         Some(t) => t,
-        None => return TreeSitterQueryResult {
-            captures: Vec::new(),
-            error: "Failed to parse source".to_string(),
-        },
+        None => {
+            return TreeSitterQueryResult {
+                captures: Vec::new(),
+                error: "Failed to parse source".to_string(),
+            }
+        }
     };
 
     let root = tree.root_node();
@@ -128,10 +142,7 @@ pub fn parse_with_tree_sitter(
     }
 }
 
-fn collect_all_nodes(
-    node: &tree_sitter::Node,
-    captures: &mut Vec<TreeSitterCapture>,
-) {
+fn collect_all_nodes(node: &tree_sitter::Node, captures: &mut Vec<TreeSitterCapture>) {
     captures.push(TreeSitterCapture {
         start: node.start_byte() as i32,
         end: node.end_byte() as i32,
@@ -155,7 +166,11 @@ mod tests {
 
     #[test]
     fn test_unsupported_language() {
-        let result = query_tree_sitter("x".to_string(), "nonexistent".to_string(), "(identifier)".to_string());
+        let result = query_tree_sitter(
+            "x".to_string(),
+            "nonexistent".to_string(),
+            "(identifier)".to_string(),
+        );
         assert!(result.error.contains("Unsupported language"));
         assert!(result.captures.is_empty());
     }
@@ -165,7 +180,11 @@ mod tests {
         let result = parse_with_tree_sitter("fn main() {}".to_string(), "rust".to_string());
         assert!(result.error.is_empty());
         assert!(!result.captures.is_empty());
-        let kinds: Vec<&str> = result.captures.iter().map(|c| c.type_name.as_str()).collect();
+        let kinds: Vec<&str> = result
+            .captures
+            .iter()
+            .map(|c| c.type_name.as_str())
+            .collect();
         assert!(kinds.contains(&"function_item"));
     }
 
@@ -181,10 +200,15 @@ mod tests {
 
     #[test]
     fn test_parse_typescript() {
-        let result = parse_with_tree_sitter("const x: number = 5;".to_string(), "typescript".to_string());
+        let result =
+            parse_with_tree_sitter("const x: number = 5;".to_string(), "typescript".to_string());
         assert!(result.error.is_empty());
         assert!(!result.captures.is_empty());
-        let kinds: Vec<&str> = result.captures.iter().map(|c| c.type_name.as_str()).collect();
+        let kinds: Vec<&str> = result
+            .captures
+            .iter()
+            .map(|c| c.type_name.as_str())
+            .collect();
         assert!(kinds.contains(&"lexical_declaration"));
     }
 
@@ -203,7 +227,11 @@ mod tests {
         let result = parse_with_tree_sitter("def hello(): pass".to_string(), "python".to_string());
         assert!(result.error.is_empty());
         assert!(!result.captures.is_empty());
-        let kinds: Vec<&str> = result.captures.iter().map(|c| c.type_name.as_str()).collect();
+        let kinds: Vec<&str> = result
+            .captures
+            .iter()
+            .map(|c| c.type_name.as_str())
+            .collect();
         assert!(kinds.contains(&"function_definition"));
     }
 }

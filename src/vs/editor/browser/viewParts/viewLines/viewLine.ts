@@ -11,7 +11,7 @@ import { RangeUtil } from './rangeUtil.js';
 import { StringBuilder } from '../../../common/core/stringBuilder.js';
 import { FloatHorizontalRange, VisibleRanges } from '../../view/renderingContext.js';
 import { LineDecoration } from '../../../common/viewLayout/lineDecorations.js';
-import { CharacterMapping, ForeignElementType, RenderLineInput, renderViewLine, DomPosition, RenderWhitespace } from '../../../common/viewLayout/viewLineRenderer.js';
+import { CharacterMapping, ForeignElementType, RenderLineInput, renderViewLine, renderViewLine2, DomPosition, RenderWhitespace } from '../../../common/viewLayout/viewLineRenderer.js';
 import { ViewportData } from '../../../common/viewLayout/viewLinesViewportData.js';
 import { isHighContrast } from '../../../../platform/theme/common/theme.js';
 import { EditorFontLigatures } from '../../../common/config/editorOptions.js';
@@ -197,7 +197,19 @@ export class ViewLine implements IVisibleLine {
 		sb.appendString(ViewLine.CLASS_NAME);
 		sb.appendString('">');
 
-		const output = renderViewLine(renderLineInput, sb);
+		const useNative = options.useMonospaceOptimizations && lineData.isBasicASCII && !lineData.containsRTL;
+		let nativeOutput: ReturnType<typeof renderViewLine2> | undefined;
+		let output: ReturnType<typeof renderViewLine>;
+		if (useNative) {
+			nativeOutput = renderViewLine2(renderLineInput);
+			sb.appendString(nativeOutput.html);
+			output = {
+				characterMapping: nativeOutput.characterMapping,
+				containsForeignElements: nativeOutput.containsForeignElements,
+			} as unknown as ReturnType<typeof renderViewLine>;
+		} else {
+			output = renderViewLine(renderLineInput, sb);
+		}
 
 		sb.appendString('</div>');
 

@@ -79,6 +79,8 @@ zbus = { version = "3.13.1", default-features = false, features = ["tokio"] }
 russh = { git = "https://github.com/microsoft/vscode-russh", branch = "main" }
 russh-cryptovec = { git = "https://github.com/microsoft/vscode-russh", branch = "main" }
 russh-keys = { git = "https://github.com/microsoft/vscode-russh", branch = "main" }
+# ponytail: vendored openssl for workspace cargo check
+# openssl = { version = "0.10", features = ["vendored"] }
 
 [profile.release]
 strip = true

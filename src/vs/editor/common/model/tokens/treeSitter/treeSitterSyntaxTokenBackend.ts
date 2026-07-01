@@ -5,7 +5,7 @@
 
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { toDisposable } from '../../../../../base/common/lifecycle.js';
-import { StandardTokenType } from '../../../encodedTokenAttributes.js';
+import { StandardTokenType, LanguageId } from '../../../encodedTokenAttributes.js';
 import { ILanguageIdCodec } from '../../../languages.js';
 import { IModelContentChangedEvent } from '../../../textModelEvents.js';
 import { BackgroundTokenizationState } from '../../../tokenizationTextModelPart.js';
@@ -18,6 +18,8 @@ import { IInstantiationService } from '../../../../../platform/instantiation/com
 import { TreeSitterTokenizationImpl } from './treeSitterTokenizationImpl.js';
 import { ITreeSitterLibraryService } from '../../../services/treeSitter/treeSitterLibraryService.js';
 import { LineRange } from '../../../core/ranges/lineRange.js';
+import { ITreeSitterThemeService } from '../../../services/treeSitter/treeSitterThemeService.js';
+import { nativeQueryTreeSitterSync, nativeCreateTokensFromCapturesScopedSync } from '../../../../../base/common/native/native.js';
 
 export class TreeSitterSyntaxTokenBackend extends AbstractSyntaxTokenBackend {
 	protected _backgroundTokenizationState: BackgroundTokenizationState = BackgroundTokenizationState.InProgress;
@@ -27,16 +29,27 @@ export class TreeSitterSyntaxTokenBackend extends AbstractSyntaxTokenBackend {
 	private readonly _tree: IObservable<TreeSitterTree | undefined>;
 	private readonly _tokenizationImpl: IObservable<TreeSitterTokenizationImpl | undefined>;
 
+	private _nativeQuerySource: string | undefined | null;
+	private _nativeCache: { captures: { start: number; end: number; typeName: string }[]; versionId: number } | undefined;
+
 	constructor(
 		private readonly _languageIdObs: IObservable<string>,
 		languageIdCodec: ILanguageIdCodec,
 		textModel: TextModel,
 		visibleLineRanges: IObservable<readonly LineRange[]>,
 		@ITreeSitterLibraryService private readonly _treeSitterLibraryService: ITreeSitterLibraryService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService
+		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@ITreeSitterThemeService private readonly _treeSitterThemeService: ITreeSitterThemeService,
 	) {
 		super(languageIdCodec, textModel);
 
+		this._nativeQuerySource = undefined;
+		this._nativeCache = undefined;
+
+		// ponytail: load SCM query source for native Rust tree-sitter parsing
+		this._treeSitterLibraryService.getHighlightingQuerySource(this._languageIdObs.get()).then(src => {
+			this._nativeQuerySource = src ?? null;
+		});
 
 		const parserClassPromise = new ObservablePromise(this._treeSitterLibraryService.getParserClass());
 
@@ -112,12 +125,65 @@ export class TreeSitterSyntaxTokenBackend extends AbstractSyntaxTokenBackend {
 	}
 
 	public getLineTokens(lineNumber: number): LineTokens {
+		const content = this._textModel.getLineContent(lineNumber);
+
+		// ponytail: native Rust fast path for languages with SCM queries loaded
+		const nativeResult = this._tokenizeLineNative(lineNumber, content);
+		if (nativeResult) {
+			return nativeResult;
+		}
+
 		const model = this._tokenizationImpl.get();
 		if (!model) {
-			const content = this._textModel.getLineContent(lineNumber);
 			return LineTokens.createEmpty(content, this._languageIdCodec);
 		}
 		return model.getLineTokens(lineNumber);
+	}
+
+	private _tokenizeLineNative(lineNumber: number, lineContent: string): LineTokens | undefined {
+		if (typeof this._nativeQuerySource !== 'string') { return undefined; }
+
+		const versionId = this._textModel.getVersionId();
+		if (!this._nativeCache || this._nativeCache.versionId !== versionId) {
+			const result = nativeQueryTreeSitterSync(
+				this._textModel.getValue(),
+				this._languageIdObs.get(),
+				this._nativeQuerySource
+			);
+			if (!result || result.error) { return undefined; }
+			this._nativeCache = { captures: result.captures, versionId };
+		}
+
+		const sourceOffset = this._textModel.getOffsetAt({ lineNumber, column: 1 });
+		const lineEndOffset = lineNumber < this._textModel.getLineCount()
+			? this._textModel.getOffsetAt({ lineNumber: lineNumber + 1, column: 1 })
+			: this._textModel.getValueLength();
+
+		const encodedLanguageId = this._languageIdCodec.encodeLanguageId(this._languageIdObs.get()) as LanguageId;
+		const lineCaptures = this._nativeCache.captures
+			.filter(c => c.end > sourceOffset && c.start < lineEndOffset)
+			.map(c => ({ start: c.start, end: c.end, typeName: c.typeName, languageId: encodedLanguageId }));
+
+		const baseScope: string = 'source';
+
+		const scopedTokens = nativeCreateTokensFromCapturesScopedSync(lineCaptures, sourceOffset, lineEndOffset, baseScope);
+		if (!scopedTokens) { return undefined; }
+
+		const tokens = scopedTokens.map(t => {
+			const scopes: string[] = JSON.parse(t.scopesJson);
+			const bracket: number[] | undefined = JSON.parse(t.bracketJson);
+			return {
+				endOffset: t.endOffset,
+				metadata: this._treeSitterThemeService.findMetadata(scopes, encodedLanguageId, !!bracket && bracket.length > 0, undefined),
+			};
+		});
+
+		const uint32 = new Uint32Array(tokens.length * 2);
+		for (let i = 0; i < tokens.length; i++) {
+			uint32[i * 2] = tokens[i].endOffset;
+			uint32[i * 2 + 1] = tokens[i].metadata;
+		}
+		return new LineTokens(uint32, lineContent, this._languageIdCodec);
 	}
 
 	public todo_resetTokenization(fireTokenChangeEvent: boolean = true): void {

@@ -153,6 +153,16 @@ export class TreeSitterLibraryService extends Disposable implements ITreeSitterL
 		const treeSitter = await this._treeSitterImport.value;
 		return new treeSitter.Query(language, querySource);
 	}
+
+	async getHighlightingQuerySource(languageId: string): Promise<string | undefined> {
+		const injectionsQueriesLocation: AppResourcePath = `vs/editor/common/languages/highlights/${languageId}.scm`;
+		const uri = FileAccess.asFileUri(injectionsQueriesLocation);
+		if (!this._fileService.hasProvider(uri)) {
+			return undefined;
+		}
+		const result = await tryReadFile(this._fileService, uri);
+		return result?.value.toString();
+	}
 }
 
 async function tryReadFile(fileService: IFileService, uri: URI): Promise<IFileContent | undefined> {

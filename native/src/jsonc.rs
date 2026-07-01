@@ -11,38 +11,34 @@ pub struct JsoncParseResult {
 pub fn parse_jsonc(content: String) -> JsoncParseResult {
     let stripped = strip_comments(&content);
     match serde_json::from_str::<Value>(&stripped) {
-        Ok(val) => {
-            match serde_json::to_string(&val) {
-                Ok(json_str) => JsoncParseResult {
-                    ok: true,
-                    value: Some(json_str),
-                    error: None,
-                },
-                Err(e) => JsoncParseResult {
-                    ok: false,
-                    value: None,
-                    error: Some(e.to_string()),
-                },
-            }
-        }
+        Ok(val) => match serde_json::to_string(&val) {
+            Ok(json_str) => JsoncParseResult {
+                ok: true,
+                value: Some(json_str),
+                error: None,
+            },
+            Err(e) => JsoncParseResult {
+                ok: false,
+                value: None,
+                error: Some(e.to_string()),
+            },
+        },
         Err(_) => {
             // Try stripping trailing commas
             let trailing_commas_stripped = strip_trailing_commas(&stripped);
             match serde_json::from_str::<Value>(&trailing_commas_stripped) {
-                Ok(val) => {
-                    match serde_json::to_string(&val) {
-                        Ok(json_str) => JsoncParseResult {
-                            ok: true,
-                            value: Some(json_str),
-                            error: None,
-                        },
-                        Err(e) => JsoncParseResult {
-                            ok: false,
-                            value: None,
-                            error: Some(e.to_string()),
-                        },
-                    }
-                }
+                Ok(val) => match serde_json::to_string(&val) {
+                    Ok(json_str) => JsoncParseResult {
+                        ok: true,
+                        value: Some(json_str),
+                        error: None,
+                    },
+                    Err(e) => JsoncParseResult {
+                        ok: false,
+                        value: None,
+                        error: Some(e.to_string()),
+                    },
+                },
                 Err(e) => JsoncParseResult {
                     ok: false,
                     value: None,
@@ -119,7 +115,9 @@ fn strip_trailing_commas(content: &str) -> String {
         if c == ',' {
             // Look ahead for whitespace followed by } or ]
             let mut j = i + 1;
-            while j < len && (chars[j] == ' ' || chars[j] == '\t' || chars[j] == '\n' || chars[j] == '\r') {
+            while j < len
+                && (chars[j] == ' ' || chars[j] == '\t' || chars[j] == '\n' || chars[j] == '\r')
+            {
                 j += 1;
             }
             if j < len && (chars[j] == '}' || chars[j] == ']') {

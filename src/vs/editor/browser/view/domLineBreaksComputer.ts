@@ -14,6 +14,7 @@ import { InjectedTextOptions } from '../../common/model.js';
 import { ILineBreaksComputer, ILineBreaksComputerContext, ILineBreaksComputerFactory, ModelLineProjectionData } from '../../common/modelLineProjectionData.js';
 import { LineInjectedText } from '../../common/textModelEvents.js';
 import { FontInfo } from '../../common/config/fontInfo.js';
+import { nativeMeasureTextWidthsSync, nativeGetFontPathSync } from '../../../base/common/native/native.js';
 
 const ttPolicy = createTrustedTypesPolicy('domLineBreaksComputer', { createHTML: value => value });
 
@@ -70,6 +71,10 @@ function createLineBreaks(targetWindow: Window, context: ILineBreaksComputerCont
 	const additionalIndentSize = Math.round(tabSize * additionalIndent);
 	const additionalIndentLength = Math.ceil(fontInfo.spaceWidth * additionalIndentSize);
 
+	// Try native rustybuzz path for word breaking
+	const fontPath = nativeGetFontPathSync(fontInfo.fontFamily);
+	const useNative = fontPath !== undefined;
+
 	const containerDomNode = document.createElement('div');
 	applyFontInfo(containerDomNode, fontInfo);
 
@@ -79,6 +84,13 @@ function createLineBreaks(targetWindow: Window, context: ILineBreaksComputerCont
 	const renderLineContents: string[] = [];
 	const allCharOffsets: number[][] = [];
 	const allVisibleColumns: number[][] = [];
+	let hasNativeResult = false;
+	let nativeBreakOffsets: (number[] | null)[] = [];
+
+	if (useNative) {
+		nativeBreakOffsets = new Array(lineNumbers.length);
+	}
+
 	for (let i = 0; i < lineNumbers.length; i++) {
 		const lineNumber = lineNumbers[i];
 		const lineContent = LineInjectedText.applyInjectedText(context.getLineContent(lineNumber), context.getLineInjectedText(lineNumber));
@@ -90,12 +102,8 @@ function createLineBreaks(targetWindow: Window, context: ILineBreaksComputerCont
 		if (wrappingIndent !== WrappingIndent.None) {
 			firstNonWhitespaceIndex = strings.firstNonWhitespaceIndex(lineContent);
 			if (firstNonWhitespaceIndex === -1) {
-				// all whitespace line
 				firstNonWhitespaceIndex = 0;
-
 			} else {
-				// Track existing indent
-
 				for (let i = 0; i < firstNonWhitespaceIndex; i++) {
 					const charWidth = (
 						lineContent.charCodeAt(i) === CharCode.Tab
@@ -107,7 +115,6 @@ function createLineBreaks(targetWindow: Window, context: ILineBreaksComputerCont
 
 				const indentWidth = Math.ceil(fontInfo.spaceWidth * wrappedTextIndentLength);
 
-				// Force sticking to beginning of line if no character would fit except for the indentation
 				if (indentWidth + fontInfo.typicalFullwidthCharacterWidth > overallWidth) {
 					firstNonWhitespaceIndex = 0;
 					wrappedTextIndentLength = 0;
@@ -118,6 +125,40 @@ function createLineBreaks(targetWindow: Window, context: ILineBreaksComputerCont
 		}
 
 		const renderLineContent = lineContent.substr(firstNonWhitespaceIndex);
+
+		// Native rustybuzz path: measure character widths and compute break offsets
+		if (useNative && renderLineContent.length > 1) {
+			const widths = nativeMeasureTextWidthsSync(fontPath, renderLineContent.split(''), fontInfo.fontSize);
+			if (widths) {
+				const breaks: number[] = [];
+				let lineWidth = 0;
+				const overflowWidth = width;
+				for (let ci = 0; ci < widths.length; ci++) {
+					const ch = renderLineContent.charCodeAt(ci);
+					let cw: number;
+					if (ch === CharCode.Tab) {
+						cw = (tabSize - (wrappedTextIndentLength % tabSize)) * fontInfo.spaceWidth;
+					} else {
+						cw = widths[ci];
+					}
+					if (lineWidth + cw > overflowWidth) {
+						breaks.push(ci + firstNonWhitespaceIndex);
+						lineWidth = 0;
+					}
+					lineWidth += cw;
+				}
+				if (breaks.length > 0) {
+					breaks.push(renderLineContent.length + firstNonWhitespaceIndex);
+				}
+				nativeBreakOffsets[i] = breaks.length > 0 ? breaks : null;
+				hasNativeResult = true;
+				firstNonWhitespaceIndices[i] = firstNonWhitespaceIndex;
+				wrappedTextIndentLengths[i] = wrappedTextIndentLength;
+				renderLineContents[i] = renderLineContent;
+				continue;
+			}
+		}
+
 		const tmp = renderLine(renderLineContent, wrappedTextIndentLength, tabSize, width, sb, additionalIndentLength);
 		firstNonWhitespaceIndices[i] = firstNonWhitespaceIndex;
 		wrappedTextIndentLengths[i] = wrappedTextIndentLength;
@@ -125,6 +166,36 @@ function createLineBreaks(targetWindow: Window, context: ILineBreaksComputerCont
 		allCharOffsets[i] = tmp[0];
 		allVisibleColumns[i] = tmp[1];
 	}
+
+	// If all lines used native path, skip DOM rendering entirely
+	if (useNative && hasNativeResult) {
+		const result: (ModelLineProjectionData | null)[] = [];
+		for (let i = 0; i < lineNumbers.length; i++) {
+			const lineNumber = lineNumbers[i];
+			const nativeBreaks = nativeBreakOffsets[i];
+			if (nativeBreaks === null || nativeBreaks.length === 0) {
+				result[i] = createEmptyLineBreakWithPossiblyInjectedText(lineNumber);
+				continue;
+			}
+			const firstNonWhitespaceIndex = firstNonWhitespaceIndices[i];
+			const wrappedTextIndentLength = wrappedTextIndentLengths[i] + additionalIndentSize;
+
+			let injectionOptions: InjectedTextOptions[] | null;
+			let injectionOffsets: number[] | null;
+			const curInjectedTexts = context.getLineInjectedText(lineNumber);
+			if (curInjectedTexts) {
+				injectionOptions = curInjectedTexts.map(t => t.options);
+				injectionOffsets = curInjectedTexts.map(text => text.column - 1);
+			} else {
+				injectionOptions = null;
+				injectionOffsets = null;
+			}
+
+			result[i] = new ModelLineProjectionData(injectionOffsets, injectionOptions, nativeBreaks, [], wrappedTextIndentLength);
+		}
+		return result;
+	}
+
 	const html = sb.build();
 	const trustedhtml = ttPolicy?.createHTML(html) ?? html;
 	containerDomNode.innerHTML = trustedhtml as string;

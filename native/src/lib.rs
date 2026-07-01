@@ -1,29 +1,33 @@
 #[macro_use]
 extern crate napi_derive;
 
-pub mod fuzzy;
-pub mod diff;
-pub mod hash;
-pub mod encoding;
-pub mod jsonc;
-pub mod welcome;
 pub mod color;
-pub mod tokenize;
-pub mod search;
+pub mod diff;
+pub mod encoding;
+pub mod fuzzy;
+pub mod hash;
+pub mod jsonc;
 pub mod render;
+pub mod search;
+pub mod text_layout;
+pub mod tokenize;
 pub mod treesitter;
+pub mod watcher;
+pub mod welcome;
 
-pub use fuzzy::*;
-pub use diff::*;
-pub use hash::*;
-pub use encoding::*;
-pub use jsonc::*;
-pub use welcome::*;
 pub use color::*;
-pub use tokenize::*;
-pub use search::*;
+pub use diff::*;
+pub use encoding::*;
+pub use fuzzy::*;
+pub use hash::*;
+pub use jsonc::*;
 pub use render::*;
+pub use search::*;
+pub use text_layout::*;
+pub use tokenize::*;
 pub use treesitter::*;
+pub use watcher::*;
+pub use welcome::*;
 
 #[napi]
 pub fn hello() -> String {

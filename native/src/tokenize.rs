@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[napi(object)]
 pub struct TokenCapture {
     pub start: i32,
@@ -41,7 +41,11 @@ fn find_brackets(text: &str, start_offset: i32) -> Option<Vec<i32>> {
             positions.push(start_offset + i as i32);
         }
     }
-    if positions.is_empty() { None } else { Some(positions) }
+    if positions.is_empty() {
+        None
+    } else {
+        Some(positions)
+    }
 }
 
 #[napi]
@@ -61,37 +65,66 @@ pub fn create_tokens_from_captures_scoped(
         }];
     }
 
-    let mut tokens: Vec<ScopeToken> = Vec::with_capacity(captures.len() + 8);
+    let mut tokens: Vec<ScopeToken> = Vec::with_capacity(captures.len() * 3 + 8);
     let mut token_idx: usize = 0;
 
-    // Pre-fill with base scope
-    for _ in 0..captures.len() + 4 {
-        tokens.push(ScopeToken { end_offset: 0, scopes: vec![base_scope.clone()], bracket: None, language_id: captures[0].language_id });
-    }
-
     for cap in &captures {
-        let token_end = if cap.end < range_end_offset { if cap.end < range_start_offset { range_start_offset } else { cap.end } } else { range_end_offset };
-        let token_start = if cap.start < range_start_offset { range_start_offset } else { cap.start };
+        let token_end = if cap.end < range_end_offset {
+            if cap.end < range_start_offset {
+                range_start_offset
+            } else {
+                cap.end
+            }
+        } else {
+            range_end_offset
+        };
+        let token_start = if cap.start < range_start_offset {
+            range_start_offset
+        } else {
+            cap.start
+        };
         let end_offset = token_end - range_start_offset;
         let cur_len = token_end - token_start;
         let start_offset = end_offset - cur_len;
 
-        let prev_end = if token_idx > 0 { tokens[token_idx - 1].end_offset } else { token_start - range_start_offset - 1 };
+        let prev_end = if token_idx > 0 {
+            tokens[token_idx - 1].end_offset
+        } else {
+            token_start - range_start_offset - 1
+        };
         if prev_end >= 0 && prev_end < start_offset {
-            tokens[token_idx] = ScopeToken { end_offset: start_offset, scopes: vec![base_scope.clone()], bracket: None, language_id: cap.language_id };
+            let tok = ScopeToken {
+                end_offset: start_offset,
+                scopes: vec![base_scope.clone()],
+                bracket: None,
+                language_id: cap.language_id,
+            };
+            if token_idx < tokens.len() {
+                tokens[token_idx] = tok;
+            } else {
+                tokens.push(tok);
+            }
             token_idx += 1;
         }
 
-        if cur_len < 0 { continue; }
+        if cur_len < 0 {
+            continue;
+        }
 
         if prev_end >= end_offset {
             let mut wi = token_idx.saturating_sub(1);
             loop {
-                let prev_prev_end = if wi >= 2 { tokens[wi - 1].end_offset } else { 0 };
+                let prev_prev_end = if wi >= 2 {
+                    tokens[wi - 1].end_offset
+                } else {
+                    0
+                };
                 if prev_prev_end + cur_len == prev_end {
                     if prev_prev_end == start_offset {
                         tokens[wi].scopes.push(cap.type_name.clone());
-                        if tokens[wi].bracket.is_none() { tokens[wi].bracket = find_brackets(&cap.type_name, start_offset); }
+                        if tokens[wi].bracket.is_none() {
+                            tokens[wi].bracket = find_brackets(&cap.type_name, start_offset);
+                        }
                     }
                 } else if prev_prev_end <= start_offset {
                     let old_scopes = tokens[wi].scopes.clone();
@@ -102,56 +135,95 @@ pub fn create_tokens_from_captures_scoped(
                         let mut post_insert: Vec<i32> = Vec::new();
                         if let Some(ref ob) = old_bracket {
                             for &b in ob {
-                                if b < start_offset { pre_insert.get_or_insert(Vec::new()).push(b); }
-                                else if b > end_offset { post_insert.push(b); }
+                                if b < start_offset {
+                                    pre_insert.get_or_insert(Vec::new()).push(b);
+                                } else if b > end_offset {
+                                    post_insert.push(b);
+                                }
                             }
-                            if pre_insert.as_ref().map_or(true, |v| v.is_empty()) { pre_insert = None; }
+                            if pre_insert.as_ref().map_or(true, |v| v.is_empty()) {
+                                pre_insert = None;
+                            }
                         }
-                        tokens.insert(wi, ScopeToken {
-                            end_offset: start_offset,
-                            scopes: old_scopes.clone(),
-                            bracket: pre_insert,
-                            language_id: cap.language_id,
-                        });
+                        tokens.insert(
+                            wi,
+                            ScopeToken {
+                                end_offset: start_offset,
+                                scopes: old_scopes.clone(),
+                                bracket: pre_insert,
+                                language_id: cap.language_id,
+                            },
+                        );
                         token_idx += 1;
-                        let remaining_bracket = if post_insert.is_empty() { None } else { Some(post_insert) };
-                        tokens.insert(wi + 1, ScopeToken {
-                            end_offset,
-                            scopes: [old_scopes, vec![cap.type_name.clone()]].concat(),
-                            bracket: remaining_bracket.or_else(|| find_brackets(&cap.type_name, start_offset)),
-                            language_id: cap.language_id,
-                        });
+                        let remaining_bracket = if post_insert.is_empty() {
+                            None
+                        } else {
+                            Some(post_insert)
+                        };
+                        tokens.insert(
+                            wi + 1,
+                            ScopeToken {
+                                end_offset,
+                                scopes: [old_scopes, vec![cap.type_name.clone()]].concat(),
+                                bracket: remaining_bracket
+                                    .or_else(|| find_brackets(&cap.type_name, start_offset)),
+                                language_id: cap.language_id,
+                            },
+                        );
                         token_idx += 1;
                         tokens[wi].bracket = None;
                     } else {
-                        tokens.insert(wi, ScopeToken {
-                            end_offset,
-                            scopes: [old_scopes, vec![cap.type_name.clone()]].concat(),
-                            bracket: old_bracket.or_else(|| find_brackets(&cap.type_name, start_offset)),
-                            language_id: cap.language_id,
-                        });
+                        tokens.insert(
+                            wi,
+                            ScopeToken {
+                                end_offset,
+                                scopes: [old_scopes, vec![cap.type_name.clone()]].concat(),
+                                bracket: old_bracket
+                                    .or_else(|| find_brackets(&cap.type_name, start_offset)),
+                                language_id: cap.language_id,
+                            },
+                        );
                         token_idx += 1;
                     }
                     break;
                 }
-                if wi == 0 { break; }
+                if wi == 0 {
+                    break;
+                }
                 wi -= 1;
-                if tokens[wi].end_offset <= start_offset { break; }
+                if tokens[wi].end_offset <= start_offset {
+                    break;
+                }
             }
         } else {
-            tokens[token_idx] = ScopeToken {
+            let tok = ScopeToken {
                 end_offset,
                 scopes: vec![base_scope.clone(), cap.type_name.clone()],
                 bracket: find_brackets(&cap.type_name, start_offset),
                 language_id: cap.language_id,
             };
+            if token_idx < tokens.len() {
+                tokens[token_idx] = tok;
+            } else {
+                tokens.push(tok);
+            }
             token_idx += 1;
         }
     }
 
     // Pad end with base scope if needed
     if token_idx > 0 && tokens[token_idx - 1].end_offset < range_len {
-        tokens[token_idx] = ScopeToken { end_offset: range_len, scopes: vec![base_scope.clone()], bracket: None, language_id: captures[0].language_id };
+        let tok = ScopeToken {
+            end_offset: range_len,
+            scopes: vec![base_scope.clone()],
+            bracket: None,
+            language_id: captures[0].language_id,
+        };
+        if token_idx < tokens.len() {
+            tokens[token_idx] = tok;
+        } else {
+            tokens.push(tok);
+        }
         token_idx += 1;
     }
 
@@ -159,7 +231,9 @@ pub fn create_tokens_from_captures_scoped(
     let mut result: Vec<ScopeTokenResult> = Vec::with_capacity(token_idx);
     for i in 0..token_idx {
         let t = &tokens[i];
-        if t.end_offset == 0 && i != 0 { break; }
+        if t.end_offset == 0 && i != 0 {
+            break;
+        }
         result.push(ScopeTokenResult {
             end_offset: t.end_offset,
             scopes_json: serde_json::to_string(&t.scopes).unwrap_or_default(),
@@ -194,16 +268,23 @@ mod tests {
         }
     }
 
-    fn s(v: &[&str]) -> Vec<String> { v.iter().map(|s| s.to_string()).collect() }
+    fn s(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
 
-    fn n() -> Option<Vec<i32>> { None }
+    fn n() -> Option<Vec<i32>> {
+        None
+    }
 
     fn parse_result(result: &[ScopeTokenResult]) -> Vec<(i32, Vec<String>, Option<Vec<i32>>)> {
-        result.iter().map(|t| {
-            let scopes: Vec<String> = serde_json::from_str(&t.scopes_json).unwrap();
-            let bracket: Option<Vec<i32>> = serde_json::from_str(&t.bracket_json).unwrap();
-            (t.end_offset, scopes, bracket)
-        }).collect()
+        result
+            .iter()
+            .map(|t| {
+                let scopes: Vec<String> = serde_json::from_str(&t.scopes_json).unwrap();
+                let bracket: Option<Vec<i32>> = serde_json::from_str(&t.bracket_json).unwrap();
+                (t.end_offset, scopes, bracket)
+            })
+            .collect()
     }
 
     #[test]
@@ -211,7 +292,10 @@ mod tests {
         let result = create_tokens_from_captures_scoped(vec![], 0, 10, "source.ts".to_string());
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].end_offset, 10);
-        assert_eq!(serde_json::from_str::<Vec<String>>(&result[0].scopes_json).unwrap(), s(&["source.ts"]));
+        assert_eq!(
+            serde_json::from_str::<Vec<String>>(&result[0].scopes_json).unwrap(),
+            s(&["source.ts"])
+        );
     }
 
     #[test]
@@ -286,15 +370,24 @@ mod tests {
         // the merged token has both scopes; the shifted old token is zero-length (ignored in display)
         assert_eq!(parsed.len(), 4);
         assert_eq!(parsed[0], (5, s(&["source.ts"]), n()));
-        assert_eq!(parsed[1], (15, s(&["source.ts", "variable", "parameter"]), n()));
+        assert_eq!(
+            parsed[1],
+            (15, s(&["source.ts", "variable", "parameter"]), n())
+        );
         assert_eq!(parsed[3], (20, s(&["source.ts"]), n()));
     }
 
     #[test]
     fn test_tokens_uint32() {
         let tokens = vec![
-            EndOffsetToken { end_offset: 5, metadata: 1 },
-            EndOffsetToken { end_offset: 10, metadata: 2 },
+            EndOffsetToken {
+                end_offset: 5,
+                metadata: 1,
+            },
+            EndOffsetToken {
+                end_offset: 10,
+                metadata: 2,
+            },
         ];
         let flat = tokens_to_uint32_array(tokens);
         assert_eq!(flat, vec![5, 1, 10, 2]);

@@ -43,6 +43,28 @@ export interface SearchMatch {
 	matchEnd: number;
 }
 
+export interface CharacterMappingEntry {
+	column: number;
+	partIndex: number;
+	offsetInPart: number;
+	horizontalOffset: number;
+}
+
+export interface RenderLineNativeResult {
+	html: string;
+	characterMappingJson: string;
+	containsForeignElements: number;
+}
+
+export interface BatchLineInput {
+	lineContent: string;
+	partsJson: string;
+	startVisibleColumn: number;
+	isOverflowing: boolean;
+	overflowingCharCount: number;
+	lenVal: number;
+}
+
 export interface ScopeTokenResult {
 	endOffset: number;
 	scopesJson: string;
@@ -76,6 +98,11 @@ export interface DecorationSpan {
 	isInline: boolean;
 }
 
+export interface FileChange {
+	path: string;
+	kind: string;
+}
+
 export interface CodNativeModule {
 	fuzzyScore(pattern: string, word: string): FuzzyScoreResult | undefined;
 	scoreFuzzy(target: string, query: string, queryLower: string, allowNonContiguous: boolean): FuzzyScoreResult;
@@ -107,11 +134,50 @@ export interface CodNativeModule {
 
 	// Rendering
 	renderLineHtml(line: string, tokensJson: string, decorationsJson: string): string;
+	renderLinesNative(
+		inputs: BatchLineInput[],
+		tabSize: number,
+		fauxIndentLength: number,
+		spaceWidth: number,
+		renderSpaceCharCode: number,
+		renderWhitespace: number,
+		renderControlCharacters: boolean,
+		canUseHalfwidthRightwardsArrow: boolean,
+		fontIsMonospace: boolean,
+		containsForeignElements: number,
+	): RenderLineNativeResult[];
+	renderLineNative(
+		lineContent: string,
+		partsJson: string,
+		tabSize: number,
+		fauxIndentLength: number,
+		startVisibleColumn: number,
+		spaceWidth: number,
+		renderSpaceCharCode: number,
+		renderWhitespace: number,
+		renderControlCharacters: boolean,
+		canUseHalfwidthRightwardsArrow: boolean,
+		fontIsMonospace: boolean,
+		containsForeignElements: number,
+		isOverflowing: boolean,
+		overflowingCharCount: number,
+		len: number,
+	): RenderLineNativeResult;
 	renderLinesHtml(lines: string[], allTokensJson: string, allDecorationsJson: string): string[];
 	renderMinimapLine(line: string, tokensJson: string, chWidth: number): string;
 
+	// Text layout
+	measureTextWidth(fontPath: string, text: string, fontSize: number, index: number): number;
+	measureTextWidths(fontPath: string, texts: string[], fontSize: number, index: number): number[];
+	getFontPath(fontName: string): string | undefined;
+
 	// Tree-sitter
 	queryTreeSitter(source: string, language: string, queryString: string): { captures: TreeSitterCapture[]; error: string };
+
+	// File watching
+	startWatcher(paths: string[]): number;
+	pollChanges(handle: number): FileChange[];
+	stopWatcher(handle: number): void;
 }
 
 let nativeModule: CodNativeModule | null | undefined = undefined;
@@ -385,6 +451,58 @@ export function nativeSearchIndexSync(pattern: string, indexJson: string, maxRes
 }
 
 // Rendering
+export function nativeRenderLinesNativeSync(
+	inputs: BatchLineInput[],
+	tabSize: number,
+	fauxIndentLength: number,
+	spaceWidth: number,
+	renderSpaceCharCode: number,
+	renderWhitespace: number,
+	renderControlCharacters: boolean,
+	canUseHalfwidthRightwardsArrow: boolean,
+	fontIsMonospace: boolean,
+	containsForeignElements: number,
+): RenderLineNativeResult[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.renderLinesNative(
+			inputs, tabSize, fauxIndentLength, spaceWidth,
+			renderSpaceCharCode, renderWhitespace,
+			renderControlCharacters, canUseHalfwidthRightwardsArrow,
+			fontIsMonospace, containsForeignElements,
+		);
+	}
+	return undefined;
+}
+
+export function nativeRenderLineNativeSync(
+	lineContent: string,
+	partsJson: string,
+	tabSize: number,
+	fauxIndentLength: number,
+	startVisibleColumn: number,
+	spaceWidth: number,
+	renderSpaceCharCode: number,
+	renderWhitespace: number,
+	renderControlCharacters: boolean,
+	canUseHalfwidthRightwardsArrow: boolean,
+	fontIsMonospace: boolean,
+	containsForeignElements: number,
+	isOverflowing: boolean,
+	overflowingCharCount: number,
+	len: number,
+): RenderLineNativeResult | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.renderLineNative(
+			lineContent, partsJson, tabSize, fauxIndentLength,
+			startVisibleColumn, spaceWidth, renderSpaceCharCode,
+			renderWhitespace, renderControlCharacters,
+			canUseHalfwidthRightwardsArrow, fontIsMonospace,
+			containsForeignElements, isOverflowing, overflowingCharCount, len
+		);
+	}
+	return undefined;
+}
+
 export function nativeRenderLineHtmlSync(line: string, tokensJson: string, decorationsJson: string): string | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.renderLineHtml(line, tokensJson, decorationsJson);
@@ -406,10 +524,54 @@ export function nativeRenderMinimapLineSync(line: string, tokensJson: string, ch
 	return undefined;
 }
 
+// Text layout
+export function nativeMeasureTextWidthSync(fontPath: string, text: string, fontSize: number, index: number = 0): number | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.measureTextWidth(fontPath, text, fontSize, index);
+	}
+	return undefined;
+}
+
+export function nativeGetFontPathSync(fontName: string): string | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.getFontPath(fontName) ?? undefined;
+	}
+	return undefined;
+}
+
+export function nativeMeasureTextWidthsSync(fontPath: string, texts: string[], fontSize: number, index: number = 0): number[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.measureTextWidths(fontPath, texts, fontSize, index);
+	}
+	return undefined;
+}
+
 // Tree-sitter
 export function nativeQueryTreeSitterSync(source: string, language: string, queryString: string): { captures: TreeSitterCapture[]; error: string } | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.queryTreeSitter(source, language, queryString);
+	}
+	return undefined;
+}
+
+// File watching
+export function nativeStartWatcherSync(paths: string[]): number | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.startWatcher(paths);
+	}
+	return undefined;
+}
+
+export function nativePollChangesSync(handle: number): FileChange[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.pollChanges(handle);
+	}
+	return undefined;
+}
+
+export function nativeStopWatcherSync(handle: number): void | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.stopWatcher(handle);
 	}
 	return undefined;
 }

@@ -22,7 +22,12 @@ fn hex_digit(c: u8) -> i32 {
 pub fn parse_css_color(css: String) -> Option<CssColor> {
     let css = css.trim();
     if css.is_empty() || css == "transparent" {
-        return Some(CssColor { r: 0, g: 0, b: 0, a: 0.0 });
+        return Some(CssColor {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 0.0,
+        });
     }
 
     if css.starts_with('#') {
@@ -110,13 +115,23 @@ fn parse_hsl(css: &str) -> Option<CssColor> {
         css.strip_prefix("hsl(")?.strip_suffix(')')?
     };
 
-    let parts: Vec<&str> = inner.split(&[',', ' '][..]).map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
-    if parts.len() < 3 { return None; }
+    let parts: Vec<&str> = inner
+        .split(&[',', ' '][..])
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if parts.len() < 3 {
+        return None;
+    }
 
     let h = parts[0].trim_end_matches("deg").parse::<f64>().ok()?;
     let s = parts[1].trim_end_matches('%').parse::<f64>().ok()?;
     let l = parts[2].trim_end_matches('%').parse::<f64>().ok()?;
-    let a = if parts.len() > 3 { parts[3].parse::<f64>().ok().unwrap_or(1.0) } else { 1.0 };
+    let a = if parts.len() > 3 {
+        parts[3].parse::<f64>().ok().unwrap_or(1.0)
+    } else {
+        1.0
+    };
 
     let s = s / 100.0;
     let l = l / 100.0;
@@ -294,5 +309,10 @@ fn parse_named(name: &str) -> Option<CssColor> {
         "yellowgreen" => (154, 205, 50),
         _ => return None,
     };
-    Some(CssColor { r: c.0, g: c.1, b: c.2, a: 1.0 })
+    Some(CssColor {
+        r: c.0,
+        g: c.1,
+        b: c.2,
+        a: 1.0,
+    })
 }

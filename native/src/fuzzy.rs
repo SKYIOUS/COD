@@ -32,7 +32,16 @@ fn char_is_lower(c: u8) -> bool {
 }
 
 fn char_is_separator(c: u8) -> bool {
-    c == b'.' || c == b'_' || c == b'-' || c == b'/' || c == b'\\' || c == b' ' || c == b'\'' || c == b'"' || c == b':' || c == b'~'
+    c == b'.'
+        || c == b'_'
+        || c == b'-'
+        || c == b'/'
+        || c == b'\\'
+        || c == b' '
+        || c == b'\''
+        || c == b'"'
+        || c == b':'
+        || c == b'~'
 }
 
 fn char_is_whitespace(c: u8) -> bool {
@@ -53,7 +62,11 @@ pub fn fuzzy_score(pattern: String, word: String) -> Option<FuzzyScoreResult> {
     let mut pi = 0;
     let mut found = false;
     for &wc in word {
-        if pi < p_len && (wc == pattern[pi] || wc.to_ascii_uppercase() == pattern[pi] || wc.to_ascii_lowercase() == pattern[pi]) {
+        if pi < p_len
+            && (wc == pattern[pi]
+                || wc.to_ascii_uppercase() == pattern[pi]
+                || wc.to_ascii_lowercase() == pattern[pi])
+        {
             pi += 1;
             if pi == p_len {
                 found = true;
@@ -141,7 +154,9 @@ pub fn fuzzy_score(pattern: String, word: String) -> Option<FuzzyScoreResult> {
                     if gap == 1 {
                         cur_score += 1;
                     } else {
-                        if wj > 0 && (char_is_separator(word[wj - 1]) || char_is_whitespace(word[wj - 1])) {
+                        if wj > 0
+                            && (char_is_separator(word[wj - 1]) || char_is_whitespace(word[wj - 1]))
+                        {
                             gap_before = true;
                         }
                         if gap > 1 {
@@ -226,7 +241,13 @@ pub fn fuzzy_score(pattern: String, word: String) -> Option<FuzzyScoreResult> {
     })
 }
 
-fn compute_char_score(target_char: u8, query_char: u8, target_index: usize, target_bytes: &[u8], seq_len: i32) -> i32 {
+fn compute_char_score(
+    target_char: u8,
+    query_char: u8,
+    target_index: usize,
+    target_bytes: &[u8],
+    seq_len: i32,
+) -> i32 {
     let mut score: i32 = 0;
 
     let same_case = target_char == query_char;
@@ -258,7 +279,12 @@ fn compute_char_score(target_char: u8, query_char: u8, target_index: usize, targ
 }
 
 #[napi]
-pub fn score_fuzzy(target: String, query: String, query_lower: String, _allow_non_contiguous: bool) -> FuzzyScore {
+pub fn score_fuzzy(
+    target: String,
+    query: String,
+    query_lower: String,
+    _allow_non_contiguous: bool,
+) -> FuzzyScore {
     let target = target.as_bytes();
     let query = query.as_bytes();
     let query_lower = query_lower.as_bytes();
@@ -290,8 +316,15 @@ pub fn score_fuzzy(target: String, query: String, query_lower: String, _allow_no
                     matches[idx] = -1;
                 } else {
                     let left_idx = if ti > 0 { qi * t_len + (ti - 1) } else { idx };
-                    let diag_idx = if qi > 0 && ti > 0 { (qi - 1) * t_len + (ti - 1) } else { idx };
-                    scores[idx] = std::cmp::max(scores.get(left_idx).copied().unwrap_or(0), scores.get(diag_idx).copied().unwrap_or(0));
+                    let diag_idx = if qi > 0 && ti > 0 {
+                        (qi - 1) * t_len + (ti - 1)
+                    } else {
+                        idx
+                    };
+                    scores[idx] = std::cmp::max(
+                        scores.get(left_idx).copied().unwrap_or(0),
+                        scores.get(diag_idx).copied().unwrap_or(0),
+                    );
                     matches[idx] = -1;
                 }
                 continue;
@@ -299,7 +332,10 @@ pub fn score_fuzzy(target: String, query: String, query_lower: String, _allow_no
 
             let mut seq_len: i32 = 0;
             if qi > 0 && ti > 0 {
-                let prev_match = matches.get((qi - 1) * t_len + (ti - 1)).copied().unwrap_or(-1);
+                let prev_match = matches
+                    .get((qi - 1) * t_len + (ti - 1))
+                    .copied()
+                    .unwrap_or(-1);
                 if prev_match >= 0 {
                     seq_len = prev_match + 1;
                 }
@@ -340,29 +376,41 @@ pub fn score_fuzzy(target: String, query: String, query_lower: String, _allow_no
     }
 
     let mut result_matches = Vec::new();
-    let total_score = if q_len > 0 && t_len > 0 { scores[q_len * t_len - 1] } else { 0 };
+    let total_score = if q_len > 0 && t_len > 0 {
+        scores[q_len * t_len - 1]
+    } else {
+        0
+    };
     if q_len > 0 && t_len > 0 && total_score > 0 {
-            let mut qi = q_len as i32 - 1;
-            let mut ti = t_len as i32 - 1;
-            while qi >= 0 && ti >= 0 {
-                let idx = (qi as usize) * t_len + (ti as usize);
-                let m = matches[idx];
-                if m >= 0 {
-                    result_matches.push(ti);
-                    qi -= 1;
+        let mut qi = q_len as i32 - 1;
+        let mut ti = t_len as i32 - 1;
+        while qi >= 0 && ti >= 0 {
+            let idx = (qi as usize) * t_len + (ti as usize);
+            let m = matches[idx];
+            if m >= 0 {
+                result_matches.push(ti);
+                qi -= 1;
+                ti -= 1;
+            } else {
+                let left = if ti > 0 {
+                    scores[(qi as usize) * t_len + ((ti - 1) as usize)]
+                } else {
+                    std::i32::MIN
+                };
+                let up = if qi > 0 {
+                    scores[((qi - 1) as usize) * t_len + (ti as usize)]
+                } else {
+                    std::i32::MIN
+                };
+                if left >= up {
                     ti -= 1;
                 } else {
-                    let left = if ti > 0 { scores[(qi as usize) * t_len + ((ti - 1) as usize)] } else { std::i32::MIN };
-                    let up = if qi > 0 { scores[((qi - 1) as usize) * t_len + (ti as usize)] } else { std::i32::MIN };
-                    if left >= up {
-                        ti -= 1;
-                    } else {
-                        qi -= 1;
-                    }
+                    qi -= 1;
                 }
             }
         }
-        result_matches.reverse();
+    }
+    result_matches.reverse();
 
     FuzzyScore {
         score: total_score,

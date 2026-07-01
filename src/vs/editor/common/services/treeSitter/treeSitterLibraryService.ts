@@ -64,4 +64,11 @@ export interface ITreeSitterLibraryService {
 	 * @param querySource The query source string to compile.
 	 */
 	createQuery(language: Language, querySource: string): Promise<Query>;
+
+	/**
+	 * Gets the raw highlighting query source (.scm file content) for a language.
+	 * Used for native Rust tree-sitter parsing which accepts SCM strings directly.
+	 * @param languageId The language identifier to retrieve.
+	 */
+	getHighlightingQuerySource(languageId: string): Promise<string | undefined>;
 }
