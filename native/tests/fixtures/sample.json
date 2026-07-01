@@ -1,0 +1,19 @@
+{
+    "version": 1,
+    "name": "Test Configuration",
+    "settings": {
+        "theme": "dark",
+        "fontSize": 14,
+        "tabSize": 4,
+        "wordWrap": true
+    },
+    "languages": ["typescript", "python", "rust"],
+    "users": [
+        { "name": "Alice", "role": "admin" },
+        { "name": "Bob", "role": "user" }
+    ],
+    "features": {
+        "search": { "enabled": true, "engine": "ripgrep" },
+        "formatting": { "enabled": true, "formatter": "prettier" }
+    }
+}

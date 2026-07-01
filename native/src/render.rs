@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 #[napi(object)]
+#[serde(rename_all = "camelCase")]
 pub struct TokenSpan {
     pub start: i32,
     pub end: i32,
@@ -10,6 +11,7 @@ pub struct TokenSpan {
 
 #[derive(Serialize, Deserialize)]
 #[napi(object)]
+#[serde(rename_all = "camelCase")]
 pub struct DecorationSpan {
     pub start: i32,
     pub end: i32,
@@ -19,6 +21,7 @@ pub struct DecorationSpan {
 
 #[derive(Serialize, Deserialize)]
 #[napi(object)]
+#[serde(rename_all = "camelCase")]
 pub struct ViewportLineData {
     pub line_content: String,
     pub tokens_json: String,
@@ -69,9 +72,21 @@ pub fn render_line_html(line: String, tokens_json: String, decorations_json: Str
         let token = tokens.get(ti);
         let deco = deco_map.get(di).copied();
 
+        let next_token_start = token.map(|t| t.start as usize).unwrap_or(line_len);
+        let next_deco_start = deco.map(|d| d.start as usize).unwrap_or(line_len);
+        let seg_start = pos;
+        // Skip ahead to next token/deco start
+        let first_active = next_token_start.min(next_deco_start).min(line_len);
+        if first_active > pos {
+            let text = &line[pos..first_active];
+            html.push_str(&escape_html(text));
+            pos = first_active;
+            if pos >= line_len { break; }
+            continue;
+        }
+
         let next_token_end = token.map(|t| t.end.max(t.start) as usize).unwrap_or(line_len);
         let next_deco_end = deco.map(|d| d.end.max(d.start) as usize).unwrap_or(line_len);
-
         let seg_end = next_token_end.min(next_deco_end).min(line_len);
 
         if seg_end <= pos { break; }
@@ -83,8 +98,6 @@ pub fn render_line_html(line: String, tokens_json: String, decorations_json: Str
         if let Some(t) = token {
             if !t.class_name.is_empty() && (pos as i32) >= t.start && (pos as i32) < t.end {
                 classes.push(&t.class_name);
-            } else {
-                ti += 1;
             }
         }
         if let Some(d) = deco {
@@ -92,8 +105,6 @@ pub fn render_line_html(line: String, tokens_json: String, decorations_json: Str
                 if d.is_inline {
                     classes.push(&d.class_name);
                 }
-            } else {
-                di += 1;
             }
         }
 
@@ -111,6 +122,14 @@ pub fn render_line_html(line: String, tokens_json: String, decorations_json: Str
         }
 
         pos = seg_end;
+
+        // Advance index if we've passed the token/deco end
+        if let Some(t) = token {
+            if (pos as i32) >= t.end { ti += 1; }
+        }
+        if let Some(d) = deco {
+            if (pos as i32) >= d.end { di += 1; }
+        }
     }
 
     if html.is_empty() {
@@ -173,4 +192,59 @@ pub fn render_minimap_line(line: String, tokens_json: String, ch_width: i32) -> 
     }
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_render_plain_line() {
+        let html = render_line_html("hello world".to_string(), "[]".to_string(), "[]".to_string());
+        assert_eq!(html, "<span>hello world</span>");
+    }
+
+    #[test]
+    fn test_render_with_tokens() {
+        let tokens = r#"[{"start":0,"end":5,"className":"keyword"}]"#;
+        let html = render_line_html("hello world".to_string(), tokens.to_string(), "[]".to_string());
+        assert!(html.contains("<span class=\"keyword\">hello</span>"));
+    }
+
+    #[test]
+    fn test_render_html_escapes() {
+        let tokens = r#"[{"start":0,"end":5,"className":"tag"}]"#;
+        let html = render_line_html("<div>".to_string(), tokens.to_string(), "[]".to_string());
+        assert!(html.contains("&lt;div&gt;"));
+    }
+
+    #[test]
+    fn test_render_with_decorations() {
+        let decos = r#"[{"start":0,"end":5,"className":"diff-inserted","isInline":true}]"#;
+        let html = render_line_html("hello world".to_string(), "[]".to_string(), decos.to_string());
+        assert!(html.contains("diff-inserted"));
+    }
+
+    #[test]
+    fn test_render_lines_batch() {
+        let lines = vec!["line one".to_string(), "line two".to_string()];
+        let all_tokens = r#"[[{"start":0,"end":4,"className":"keyword"}],[{"start":5,"end":8,"className":"string"}]]"#;
+        let results = render_lines_html(lines, all_tokens.to_string(), "[[],[]]".to_string());
+        assert_eq!(results.len(), 2);
+        assert!(results[0].contains("keyword"), "result[0] '{}' lacks keyword", results[0]);
+        assert!(results[1].contains("string"), "result[1] '{}' lacks string", results[1]);
+    }
+
+    #[test]
+    fn test_render_empty_token_list() {
+        let html = render_line_html("".to_string(), "[]".to_string(), "[]".to_string());
+        assert_eq!(html, "<span></span>");
+    }
+
+    #[test]
+    fn test_render_minimap_basic() {
+        let tokens = r#"[{"start":0,"end":4,"className":"keyword"}]"#;
+        let out = render_minimap_line("test".to_string(), tokens.to_string(), 1);
+        assert!(!out.is_empty());
+    }
 }

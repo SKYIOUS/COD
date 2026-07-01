@@ -1,6 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 #[derive(Clone, Serialize)]
 #[napi(object)]

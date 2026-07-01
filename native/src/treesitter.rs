@@ -18,9 +18,9 @@ pub struct TreeSitterQueryResult {
 fn lang_from_name(name: &str) -> Option<tree_sitter::Language> {
     match name {
         "rust" | "rs" => Some(tree_sitter_rust::language()),
-        "typescript" | "ts" => Some(tree_sitter_typescript::language()),
-        "javascript" | "js" => Some(tree_sitter_javascript::language_tsx()),
+        "typescript" | "ts" => Some(tree_sitter_typescript::language_typescript()),
         "typescriptreact" | "tsx" => Some(tree_sitter_typescript::language_tsx()),
+        "javascript" | "js" => Some(tree_sitter_javascript::language()),
         "python" | "py" => Some(tree_sitter_python::language()),
         "go" => Some(tree_sitter_go::language()),
         "java" => Some(tree_sitter_java::language()),
@@ -43,7 +43,7 @@ pub fn query_tree_sitter(
         },
     };
 
-    let query = match tree_sitter::Query::new(lang, &query_string) {
+    let query = match tree_sitter::Query::new(&lang, &query_string) {
         Ok(q) => q,
         Err(e) => return TreeSitterQueryResult {
             captures: Vec::new(),
@@ -52,7 +52,7 @@ pub fn query_tree_sitter(
     };
 
     let mut parser = tree_sitter::Parser::new();
-    if parser.set_language(lang).is_err() {
+    if parser.set_language(&lang).is_err() {
         return TreeSitterQueryResult {
             captures: Vec::new(),
             error: "Failed to set language in parser".to_string(),
@@ -103,7 +103,7 @@ pub fn parse_with_tree_sitter(
     };
 
     let mut parser = tree_sitter::Parser::new();
-    if parser.set_language(lang).is_err() {
+    if parser.set_language(&lang).is_err() {
         return TreeSitterQueryResult {
             captures: Vec::new(),
             error: "Failed to set language in parser".to_string(),
@@ -120,7 +120,7 @@ pub fn parse_with_tree_sitter(
 
     let root = tree.root_node();
     let mut captures: Vec<TreeSitterCapture> = Vec::new();
-    collect_all_nodes(&root, &source, &mut captures);
+    collect_all_nodes(&root, &mut captures);
 
     TreeSitterQueryResult {
         captures,
@@ -130,7 +130,6 @@ pub fn parse_with_tree_sitter(
 
 fn collect_all_nodes(
     node: &tree_sitter::Node,
-    source: &str,
     captures: &mut Vec<TreeSitterCapture>,
 ) {
     captures.push(TreeSitterCapture {
@@ -142,10 +141,69 @@ fn collect_all_nodes(
     let mut cursor = node.walk();
     if cursor.goto_first_child() {
         loop {
-            collect_all_nodes(&cursor.node(), source, captures);
+            collect_all_nodes(&cursor.node(), captures);
             if !cursor.goto_next_sibling() {
                 break;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unsupported_language() {
+        let result = query_tree_sitter("x".to_string(), "nonexistent".to_string(), "(identifier)".to_string());
+        assert!(result.error.contains("Unsupported language"));
+        assert!(result.captures.is_empty());
+    }
+
+    #[test]
+    fn test_parse_rust() {
+        let result = parse_with_tree_sitter("fn main() {}".to_string(), "rust".to_string());
+        assert!(result.error.is_empty());
+        assert!(!result.captures.is_empty());
+        let kinds: Vec<&str> = result.captures.iter().map(|c| c.type_name.as_str()).collect();
+        assert!(kinds.contains(&"function_item"));
+    }
+
+    #[test]
+    fn test_query_rust() {
+        let source = "fn foo() {}\nfn bar() {}".to_string();
+        let query = "(function_item name: (identifier) @funcname)".to_string();
+        let result = query_tree_sitter(source, "rust".to_string(), query);
+        assert!(result.error.is_empty());
+        assert_eq!(result.captures.len(), 2);
+        assert!(result.captures.iter().all(|c| c.type_name == "funcname"));
+    }
+
+    #[test]
+    fn test_parse_typescript() {
+        let result = parse_with_tree_sitter("const x: number = 5;".to_string(), "typescript".to_string());
+        assert!(result.error.is_empty());
+        assert!(!result.captures.is_empty());
+        let kinds: Vec<&str> = result.captures.iter().map(|c| c.type_name.as_str()).collect();
+        assert!(kinds.contains(&"lexical_declaration"));
+    }
+
+    #[test]
+    fn test_query_javascript() {
+        let source = "function hello() { return 42; }".to_string();
+        let query = "(function_declaration name: (identifier) @fnname)".to_string();
+        let result = query_tree_sitter(source, "javascript".to_string(), query);
+        assert!(result.error.is_empty());
+        assert_eq!(result.captures.len(), 1);
+        assert_eq!(result.captures[0].type_name, "fnname");
+    }
+
+    #[test]
+    fn test_parse_python() {
+        let result = parse_with_tree_sitter("def hello(): pass".to_string(), "python".to_string());
+        assert!(result.error.is_empty());
+        assert!(!result.captures.is_empty());
+        let kinds: Vec<&str> = result.captures.iter().map(|c| c.type_name.as_str()).collect();
+        assert!(kinds.contains(&"function_definition"));
     }
 }

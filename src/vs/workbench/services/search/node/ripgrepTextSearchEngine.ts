@@ -64,8 +64,8 @@ export class RipgrepTextSearchEngine {
 			const literalPattern = query.pattern;
 			const searchPattern = query.isCaseSensitive ? literalPattern : literalPattern.toLowerCase();
 			const regexForRust = escapeRegExpCharacters(searchPattern);
-			const includes = options.folderOptions.includes.length > 0 ? options.folderOptions.includes.map(e => typeof (e) === 'string' ? e : e.pattern) : undefined;
-			const excludes = options.folderOptions.excludes.length > 0 ? options.folderOptions.excludes.map(e => typeof (e) === 'string' ? e : e.pattern) : undefined;
+			const includes = options.folderOptions.includes.length > 0 ? options.folderOptions.includes : undefined;
+			const excludes = options.folderOptions.excludes.length > 0 ? options.folderOptions.excludes.map(e => typeof (e) === 'string' ? e : (e as any).pattern) : undefined;
 
 			// Use chunked search so we can cancel between chunks
 			const CHUNK_SIZE = 500;
