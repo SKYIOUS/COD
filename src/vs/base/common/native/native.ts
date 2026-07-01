@@ -43,6 +43,26 @@ export interface SearchMatch {
 	matchEnd: number;
 }
 
+export interface ScopeTokenResult {
+	endOffset: number;
+	scopesJson: string;
+	bracketJson: string;
+	languageId: number;
+}
+
+export interface IndexedFile {
+	path: string;
+	mtime: number;
+	size: number;
+	firstLine: string;
+}
+
+export interface TreeSitterCapture {
+	start: number;
+	end: number;
+	typeName: string;
+}
+
 export interface TokenSpan {
 	start: number;
 	end: number;
@@ -77,15 +97,21 @@ export interface CodNativeModule {
 	// Tokenization
 	encodeTreeSitterCaptures(captures: TokenCapture[], themeJson: string): EncodedToken[];
 	tokensToUint32Array(tokens: EncodedToken[]): number[];
+	createTokensFromCapturesScoped(captures: TokenCapture[], rangeStartOffset: number, rangeEndOffset: number, baseScope: string): ScopeTokenResult[];
 
 	// File search
-	searchFiles(root: string, pattern: string, maxResults: number): SearchMatch[];
-	searchFilesChunked(root: string, pattern: string, maxResults: number, chunkSize: number): SearchMatch[][];
+	searchFiles(root: string, pattern: string, maxResults: number, includeGlobsJson: string, excludeGlobsJson: string): SearchMatch[];
+	searchFilesChunked(root: string, pattern: string, maxResults: number, chunkSize: number, includeGlobsJson: string, excludeGlobsJson: string, startOffset: number): SearchMatch[];
+	indexDirectory(root: string, includeGlobsJson: string, excludeGlobsJson: string): IndexedFile[];
+	searchIndex(pattern: string, indexJson: string, maxResults: number): SearchMatch[];
 
 	// Rendering
 	renderLineHtml(line: string, tokensJson: string, decorationsJson: string): string;
 	renderLinesHtml(lines: string[], allTokensJson: string, allDecorationsJson: string): string[];
 	renderMinimapLine(line: string, tokensJson: string, chWidth: number): string;
+
+	// Tree-sitter
+	queryTreeSitter(source: string, language: string, queryString: string): { captures: TreeSitterCapture[]; error: string };
 }
 
 let nativeModule: CodNativeModule | null | undefined = undefined;
@@ -315,6 +341,13 @@ export function nativeEncodeTreeSitterCapturesSync(captures: TokenCapture[], the
 	return undefined;
 }
 
+export function nativeCreateTokensFromCapturesScopedSync(captures: TokenCapture[], rangeStartOffset: number, rangeEndOffset: number, baseScope: string): ScopeTokenResult[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.createTokensFromCapturesScoped(captures, rangeStartOffset, rangeEndOffset, baseScope);
+	}
+	return undefined;
+}
+
 export function nativeTokensToUint32ArraySync(tokens: EncodedToken[]): number[] | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.tokensToUint32Array(tokens);
@@ -323,16 +356,30 @@ export function nativeTokensToUint32ArraySync(tokens: EncodedToken[]): number[] 
 }
 
 // File search
-export function nativeSearchFilesSync(root: string, pattern: string, maxResults: number): SearchMatch[] | undefined {
+export function nativeSearchFilesSync(root: string, pattern: string, maxResults: number, includeGlobs?: string[], excludeGlobs?: string[]): SearchMatch[] | undefined {
 	if (nativeModuleSync) {
-		return nativeModuleSync.searchFiles(root, pattern, maxResults);
+		return nativeModuleSync.searchFiles(root, pattern, maxResults, JSON.stringify(includeGlobs ?? []), JSON.stringify(excludeGlobs ?? []));
 	}
 	return undefined;
 }
 
-export function nativeSearchFilesChunkedSync(root: string, pattern: string, maxResults: number, chunkSize: number): SearchMatch[][] | undefined {
+export function nativeSearchFilesChunkedSync(root: string, pattern: string, maxResults: number, chunkSize: number, startOffset: number, includeGlobs?: string[], excludeGlobs?: string[]): SearchMatch[] | undefined {
 	if (nativeModuleSync) {
-		return nativeModuleSync.searchFilesChunked(root, pattern, maxResults, chunkSize);
+		return nativeModuleSync.searchFilesChunked(root, pattern, maxResults, chunkSize, JSON.stringify(includeGlobs ?? []), JSON.stringify(excludeGlobs ?? []), startOffset);
+	}
+	return undefined;
+}
+
+export function nativeIndexDirectorySync(root: string, includeGlobs?: string[], excludeGlobs?: string[]): IndexedFile[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.indexDirectory(root, JSON.stringify(includeGlobs ?? []), JSON.stringify(excludeGlobs ?? []));
+	}
+	return undefined;
+}
+
+export function nativeSearchIndexSync(pattern: string, indexJson: string, maxResults: number): SearchMatch[] | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.searchIndex(pattern, indexJson, maxResults);
 	}
 	return undefined;
 }
@@ -355,6 +402,14 @@ export function nativeRenderLinesHtmlSync(lines: string[], allTokensJson: string
 export function nativeRenderMinimapLineSync(line: string, tokensJson: string, chWidth: number): string | undefined {
 	if (nativeModuleSync) {
 		return nativeModuleSync.renderMinimapLine(line, tokensJson, chWidth);
+	}
+	return undefined;
+}
+
+// Tree-sitter
+export function nativeQueryTreeSitterSync(source: string, language: string, queryString: string): { captures: TreeSitterCapture[]; error: string } | undefined {
+	if (nativeModuleSync) {
+		return nativeModuleSync.queryTreeSitter(source, language, queryString);
 	}
 	return undefined;
 }

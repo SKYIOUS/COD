@@ -22,6 +22,7 @@ import { Range } from '../../../core/range.js';
 import { isDefined } from '../../../../../base/common/types.js';
 import { ITreeSitterThemeService } from '../../../services/treeSitter/treeSitterThemeService.js';
 import { BugIndicatingError } from '../../../../../base/common/errors.js';
+import { nativeCreateTokensFromCapturesScopedSync } from '../../../../../base/common/native/native.js';
 
 export class TreeSitterTokenizationImpl extends Disposable {
 	private readonly _tokenStore: TokenStore;
@@ -751,6 +752,31 @@ export class TreeSitterTokenizationImpl extends Disposable {
 
 	private _tokenizeCapturesWithMetadata(captures: QueryCapture[], rangeStartOffset: number, rangeEndOffset: number): { endOffsetsAndMetadata: EndOffsetToken[]; captureTime: number; metadataTime: number } | undefined {
 		const stopwatch = StopWatch.create();
+		const baseScope: string = TREESITTER_BASE_SCOPES[this._tree.languageId] || 'source';
+
+		// ponytail: Rust fast path for capture-to-tokens conversion
+		const nativeResult = nativeCreateTokensFromCapturesScopedSync(
+			captures.map(c => ({ start: c.node.startIndex, end: c.node.endIndex, typeName: c.name, languageId: this._encodedLanguageId })),
+			rangeStartOffset,
+			rangeEndOffset,
+			baseScope
+		);
+		if (nativeResult) {
+			const endOffsetsAndScopes: EndOffsetWithMeta[] = nativeResult.map(t => ({
+				endOffset: t.endOffset,
+				scopes: JSON.parse(t.scopesJson) as string[],
+				bracket: JSON.parse(t.bracketJson) as number[] | undefined,
+				encodedLanguageId: t.languageId as LanguageId,
+				metadata: 0,
+			}));
+			for (let i = 0; i < endOffsetsAndScopes.length; i++) {
+				const token = endOffsetsAndScopes[i];
+				token.metadata = this._treeSitterThemeService.findMetadata(token.scopes, token.encodedLanguageId, !!token.bracket && (token.bracket.length > 0), undefined);
+			}
+			const metadataTime = stopwatch.elapsed();
+			return { endOffsetsAndMetadata: endOffsetsAndScopes as { endOffset: number; scopes: string[]; metadata: number }[], captureTime: 0, metadataTime };
+		}
+
 		const emptyTokens = this._createTokensFromCaptures(captures, rangeStartOffset, rangeEndOffset);
 		if (!emptyTokens) {
 			return undefined;

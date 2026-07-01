@@ -17,6 +17,17 @@ pub struct DecorationSpan {
     pub is_inline: bool,
 }
 
+#[derive(Serialize, Deserialize)]
+#[napi(object)]
+pub struct ViewportLineData {
+    pub line_content: String,
+    pub tokens_json: String,
+    pub decorations_json: String,
+    pub tab_size: i32,
+    pub faux_indent_length: i32,
+    pub is_overflowing: bool,
+}
+
 fn escape_html(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for ch in s.chars() {

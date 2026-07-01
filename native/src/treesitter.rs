@@ -1,6 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[napi(object)]
 pub struct TreeSitterCapture {
     pub start: i32,
@@ -26,6 +26,66 @@ fn lang_from_name(name: &str) -> Option<tree_sitter::Language> {
         "java" => Some(tree_sitter_java::language()),
         "json" => Some(tree_sitter_json::language()),
         _ => None,
+    }
+}
+
+#[napi]
+pub fn query_tree_sitter(
+    source: String,
+    language: String,
+    query_string: String,
+) -> TreeSitterQueryResult {
+    let lang = match lang_from_name(&language) {
+        Some(l) => l,
+        None => return TreeSitterQueryResult {
+            captures: Vec::new(),
+            error: format!("Unsupported language: {}", language),
+        },
+    };
+
+    let query = match tree_sitter::Query::new(lang, &query_string) {
+        Ok(q) => q,
+        Err(e) => return TreeSitterQueryResult {
+            captures: Vec::new(),
+            error: format!("Query error: {}", e),
+        },
+    };
+
+    let mut parser = tree_sitter::Parser::new();
+    if parser.set_language(lang).is_err() {
+        return TreeSitterQueryResult {
+            captures: Vec::new(),
+            error: "Failed to set language in parser".to_string(),
+        };
+    }
+
+    let tree = match parser.parse(&source, None) {
+        Some(t) => t,
+        None => return TreeSitterQueryResult {
+            captures: Vec::new(),
+            error: "Failed to parse source".to_string(),
+        },
+    };
+
+    let root = tree.root_node();
+    let mut captures: Vec<TreeSitterCapture> = Vec::new();
+    let mut query_cursor = tree_sitter::QueryCursor::new();
+
+    let matches = query_cursor.matches(&query, root, source.as_bytes());
+    for match_ in matches {
+        for capture in match_.captures {
+            let name = query.capture_names()[capture.index as usize].to_string();
+            captures.push(TreeSitterCapture {
+                start: capture.node.start_byte() as i32,
+                end: capture.node.end_byte() as i32,
+                type_name: name,
+            });
+        }
+    }
+
+    TreeSitterQueryResult {
+        captures,
+        error: String::new(),
     }
 }
 
@@ -73,8 +133,6 @@ fn collect_all_nodes(
     source: &str,
     captures: &mut Vec<TreeSitterCapture>,
 ) {
-    // ponytail: emits every node as a named capture (type + parent type).
-    // Upgrade path: accept a .scm query string for targeted captures.
     captures.push(TreeSitterCapture {
         start: node.start_byte() as i32,
         end: node.end_byte() as i32,

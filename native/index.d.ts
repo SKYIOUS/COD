@@ -23,13 +23,18 @@ declare module 'cod-native' {
 	// Tokenization
 	export interface TokenCapture { start: number; end: number; typeName: string; languageId: number }
 	export interface EncodedToken { startIndex: number; metadata: number }
+	export interface ScopeTokenResult { endOffset: number; scopesJson: string; bracketJson: string; languageId: number }
 	export function encodeTreeSitterCaptures(captures: TokenCapture[], themeJson: string): EncodedToken[];
 	export function tokensToUint32Array(tokens: EncodedToken[]): number[];
+	export function createTokensFromCapturesScoped(captures: TokenCapture[], rangeStartOffset: number, rangeEndOffset: number, baseScope: string): ScopeTokenResult[];
 
 	// File search
 	export interface SearchMatch { path: string; lineNumber: number; lineContent: string; matchStart: number; matchEnd: number }
-	export function searchFiles(root: string, pattern: string, maxResults: number): SearchMatch[];
-	export function searchFilesChunked(root: string, pattern: string, maxResults: number, chunkSize: number): SearchMatch[][];
+	export interface IndexedFile { path: string; mtime: number; size: number; firstLine: string }
+	export function searchFiles(root: string, pattern: string, maxResults: number, includeGlobsJson: string, excludeGlobsJson: string): SearchMatch[];
+	export function searchFilesChunked(root: string, pattern: string, maxResults: number, chunkSize: number, includeGlobsJson: string, excludeGlobsJson: string, startOffset: number): SearchMatch[];
+	export function indexDirectory(root: string, includeGlobsJson: string, excludeGlobsJson: string): IndexedFile[];
+	export function searchIndex(pattern: string, indexJson: string, maxResults: number): SearchMatch[];
 
 	// Rendering
 	export interface TokenSpan { start: number; end: number; className: string }
@@ -37,4 +42,9 @@ declare module 'cod-native' {
 	export function renderLineHtml(line: string, tokensJson: string, decorationsJson: string): string;
 	export function renderLinesHtml(lines: string[], allTokensJson: string, allDecorationsJson: string): string[];
 	export function renderMinimapLine(line: string, tokensJson: string, chWidth: number): string;
+
+	// Tree-sitter
+	export interface TreeSitterCapture { start: number; end: number; typeName: string }
+	export function queryTreeSitter(source: string, language: string, queryString: string): { captures: TreeSitterCapture[]; error: string };
+	export function parseWithTreeSitter(source: string, language: string): { captures: TreeSitterCapture[]; error: string };
 }

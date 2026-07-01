@@ -20,7 +20,7 @@ import { anchorGlob, IOutputChannel, Maybe, rangeToSearchRange, searchRangeToRan
 import type { RipgrepTextSearchOptions } from '../common/searchExtTypesInternal.js';
 import { newToOldPreviewOptions } from '../common/searchExtConversionTypes.js';
 import { rgDiskPath } from '../../../../base/node/ripgrep.js';
-import { nativeSearchFilesSync } from '../../../../base/common/native/native.js';
+import { nativeSearchFilesChunkedSync } from '../../../../base/common/native/native.js';
 
 export class RipgrepTextSearchEngine {
 
@@ -59,13 +59,24 @@ export class RipgrepTextSearchEngine {
 		}
 
 		// ponytail: fast path using native Rust search for simple literal patterns
-		if (!query.isRegExp && !query.isMultiline && !query.isWordMatch && options.folderOptions.excludes.length === 0 && options.folderOptions.includes.length === 0) {
+		if (!query.isRegExp && !query.isMultiline && !query.isWordMatch) {
 			const root = options.folderOptions.folder.fsPath;
-			const searchPattern = query.isCaseSensitive ? query.pattern : query.pattern.toLowerCase();
-			const nativeResults = nativeSearchFilesSync(root, escapeRegExpCharacters(searchPattern), options.maxResults ?? 10000);
-			if (nativeResults) {
-				let limitHit = false;
-				for (const match of nativeResults) {
+			const literalPattern = query.pattern;
+			const searchPattern = query.isCaseSensitive ? literalPattern : literalPattern.toLowerCase();
+			const regexForRust = escapeRegExpCharacters(searchPattern);
+			const includes = options.folderOptions.includes.length > 0 ? options.folderOptions.includes.map(e => typeof (e) === 'string' ? e : e.pattern) : undefined;
+			const excludes = options.folderOptions.excludes.length > 0 ? options.folderOptions.excludes.map(e => typeof (e) === 'string' ? e : e.pattern) : undefined;
+
+			// Use chunked search so we can cancel between chunks
+			const CHUNK_SIZE = 500;
+			let offset = 0;
+			let limitHit = false;
+			const maxResults = options.maxResults ?? 10000;
+
+			while (!token.isCancellationRequested) {
+				const chunk = nativeSearchFilesChunkedSync(root, regexForRust, maxResults, CHUNK_SIZE, offset, includes, excludes);
+				if (!chunk || chunk.length === 0) { break; }
+				for (const match of chunk) {
 					if (token.isCancellationRequested) { limitHit = true; break; }
 					const line = query.isCaseSensitive ? match.lineContent : match.lineContent.toLowerCase();
 					const idx = line.indexOf(searchPattern);
@@ -74,8 +85,11 @@ export class RipgrepTextSearchEngine {
 					const matchUri = URI.joinPath(options.folderOptions.folder, match.path);
 					progress.report(new TextSearchMatch2(matchUri, [{ sourceRange, previewRange: sourceRange }], match.lineContent));
 				}
-				return { limitHit };
+				if (chunk.length < CHUNK_SIZE) { break; }
+				offset += CHUNK_SIZE;
+				if (limitHit) { break; }
 			}
+			return { limitHit };
 		}
 
 		const resolvedRgDiskPath = await rgDiskPath();
